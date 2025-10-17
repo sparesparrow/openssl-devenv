@@ -1,0 +1,1 @@
+. "/home/sparrow/projects/openssl-devenv/conanbuildenv-release-x86_64.sh"

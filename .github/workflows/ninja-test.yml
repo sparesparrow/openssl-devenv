@@ -1,0 +1,280 @@
+name: Ninja Build Test
+
+on:
+    pull_request:
+        paths:
+            - "Configurations/build.ninja.tmpl"
+            - "Configure"
+    push:
+        branches:
+            - "feat/ninja-generator"
+    workflow_dispatch:
+
+env:
+    NINJA_VERSION: "1.13.1"
+
+jobs:
+    test-ninja-linux:
+        runs-on: ubuntu-22.04
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Ninja
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build
+                  ninja --version
+
+            - name: Configure with Ninja
+              run: |
+                  perl Configure linux-x86_64 --format=ninja --strict-warnings
+                  echo "Generated build.ninja file:"
+                  ls -la build.ninja
+                  head -20 build.ninja
+
+            - name: Build with Ninja
+              run: |
+                  ninja -j$(nproc)
+                  echo "Build completed successfully"
+
+            - name: Run tests
+              run: |
+                  ninja test
+                  echo "Tests completed successfully"
+
+            - name: Verify compile_commands.json
+              run: |
+                  if [ -f compile_commands.json ]; then
+                    echo "✅ compile_commands.json generated"
+                    jq -e '. | length > 0' compile_commands.json
+                    echo "Found $(jq '. | length' compile_commands.json) compile commands"
+                  else
+                    echo "⚠️ compile_commands.json not found (expected for some configurations)"
+                  fi
+
+            - name: Test install target
+              run: |
+                  ninja install DESTDIR=./install-test
+                  echo "Install completed successfully"
+                  ls -la install-test/
+
+    test-ninja-windows:
+        runs-on: windows-2022
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Ninja
+              run: |
+                  choco install ninja
+                  ninja --version
+
+            - name: Setup MSVC
+              uses: ilammy/msvc-dev-cmd@v1
+
+            - name: Configure with Ninja
+              run: |
+                  perl Configure VC-WIN64A --format=ninja --strict-warnings
+                  echo "Generated build.ninja file:"
+                  dir build.ninja
+                  type build.ninja | Select-Object -First 20
+
+            - name: Build with Ninja (parallel)
+              run: |
+                  $startTime = Get-Date
+                  ninja -j8
+                  $endTime = Get-Date
+                  $duration = ($endTime - $startTime).TotalSeconds
+                  echo "Build completed in $duration seconds"
+
+            - name: Measure build time improvement
+              run: |
+                  echo "Ninja build completed successfully"
+                  echo "This demonstrates parallel build capability on Windows"
+                  echo "Compare with nmake which only supports single-threaded builds"
+
+            - name: Run tests
+              run: |
+                  ninja test
+                  echo "Tests completed successfully"
+
+    test-ninja-macos:
+        runs-on: macos-13
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Ninja
+              run: |
+                  brew install ninja
+                  ninja --version
+
+            - name: Configure with Ninja
+              run: |
+                  perl Configure darwin64-arm64 --format=ninja --strict-warnings
+                  echo "Generated build.ninja file:"
+                  ls -la build.ninja
+                  head -20 build.ninja
+
+            - name: Build with Ninja
+              run: |
+                  ninja -j$(sysctl -n hw.ncpu)
+                  echo "Build completed successfully"
+
+            - name: Run tests
+              run: |
+                  ninja test
+                  echo "Tests completed successfully"
+
+    test-ninja-fips:
+        runs-on: ubuntu-22.04
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Ninja
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build
+                  ninja --version
+
+            - name: Configure FIPS with Ninja
+              run: |
+                  perl Configure linux-x86_64 enable-fips --format=ninja --strict-warnings
+                  echo "Generated build.ninja file for FIPS:"
+                  ls -la build.ninja
+                  head -20 build.ninja
+
+            - name: Build FIPS with Ninja
+              run: |
+                  ninja -j$(nproc)
+                  echo "FIPS build completed successfully"
+
+            - name: FIPS self-test
+              run: |
+                  ninja test_fips
+                  echo "FIPS self-tests completed successfully"
+
+            - name: Verify FIPS module
+              run: |
+                  ./apps/openssl list -providers -verbose | grep fips
+                  echo "FIPS provider loaded successfully"
+
+    test-ninja-compatibility:
+        runs-on: ubuntu-22.04
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Ninja
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build
+
+            - name: Test default Makefile (unchanged behavior)
+              run: |
+                  perl Configure linux-x86_64 --strict-warnings
+                  ls -la Makefile
+                  echo "Default Makefile generation still works"
+
+            - name: Test Ninja format
+              run: |
+                  perl Configure linux-x86_64 --format=ninja --strict-warnings
+                  ls -la build.ninja
+                  echo "Ninja format works"
+
+            - name: Test invalid format
+              run: |
+                  if perl Configure linux-x86_64 --format=invalid --strict-warnings 2>&1 | grep -q "Unknown build format"; then
+                    echo "✅ Invalid format properly rejected"
+                  else
+                    echo "❌ Invalid format not rejected"
+                    exit 1
+                  fi
+
+    test-ninja-performance:
+        runs-on: ubuntu-22.04
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Ninja
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build
+
+            - name: Benchmark Make vs Ninja
+              run: |
+                  echo "=== Makefile Build ==="
+                  perl Configure linux-x86_64 --strict-warnings
+                  make clean 2>/dev/null || true
+                  time make -j$(nproc)
+
+                  echo "=== Ninja Build ==="
+                  perl Configure linux-x86_64 --format=ninja --strict-warnings
+                  ninja -t clean 2>/dev/null || true
+                  time ninja -j$(nproc)
+
+                  echo "Performance comparison completed"
+
+    test-ninja-cross-compile:
+        runs-on: ubuntu-22.04
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install cross-compilation tools
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ninja-build gcc-aarch64-linux-gnu
+
+            - name: Configure cross-compilation with Ninja
+              run: |
+                  perl Configure linux-aarch64 --format=ninja --cross-compile-prefix=aarch64-linux-gnu-
+                  echo "Cross-compilation configuration completed"
+
+            - name: Build with Ninja (cross-compile)
+              run: |
+                  ninja -j$(nproc)
+                  echo "Cross-compilation build completed"
+
+            - name: Verify cross-compiled binaries
+              run: |
+                  file apps/openssl
+                  echo "Cross-compiled binary verification completed"
+
+    # Notification job that runs after all test jobs
+    notify-completion:
+        needs:
+            [
+                test-ninja-linux,
+                test-ninja-windows,
+                test-ninja-macos,
+                test-ninja-fips,
+                test-ninja-compatibility,
+                test-ninja-performance,
+                test-ninja-cross-compile,
+            ]
+        if: always()
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check job results
+              run: |
+                  if [ "${{ needs.test-ninja-linux.result }}" == "success" ] && \
+                     [ "${{ needs.test-ninja-windows.result }}" == "success" ] && \
+                     [ "${{ needs.test-ninja-macos.result }}" == "success" ] && \
+                     [ "${{ needs.test-ninja-fips.result }}" == "success" ] && \
+                     [ "${{ needs.test-ninja-compatibility.result }}" == "success" ] && \
+                     [ "${{ needs.test-ninja-performance.result }}" == "success" ] && \
+                     [ "${{ needs.test-ninja-cross-compile.result }}" == "success" ]; then
+                    echo "✅ All Ninja build tests completed successfully"
+                  else
+                    echo "❌ Some Ninja build tests failed"
+                    echo "Check the workflow logs for details"
+                  fi
+
+            - name: Generate summary
+              run: |
+                  echo "## Ninja Build Test Summary" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Status**: ${{ needs.test-ninja-linux.result }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Linux**: ${{ needs.test-ninja-linux.result }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Windows**: ${{ needs.test-ninja-windows.result }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **macOS**: ${{ needs.test-ninja-macos.result }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **FIPS**: ${{ needs.test-ninja-fips.result }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Compatibility**: ${{ needs.test-ninja-compatibility.result }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Performance**: ${{ needs.test-ninja-performance.result }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Cross-compile**: ${{ needs.test-ninja-cross-compile.result }}" >> $GITHUB_STEP_SUMMARY

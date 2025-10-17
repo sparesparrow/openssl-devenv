@@ -1,0 +1,143 @@
+  {
+    "folders": [
+      {
+        "name": "openssl-devenv",
+        "path": "."
+      },
+      {
+        "name": "🔐 Foundation: OpenSSL Conan Base",
+        "path": "openssl-conan-base"
+      },
+      {
+        "name": "🏛️ Foundation: FIPS Policy",
+        "path": "openssl-fips-policy"
+      },
+      {
+        "name": "🛠️ Tooling: OpenSSL Tools",
+        "path": "openssl-tools"
+      },
+      {
+        "name": "🔬 Fuzz Corpora",
+        "path": "fuzz-corpora"
+      },
+      {
+        "name": "🌐 Domain: OpenSSL",
+        "path": "openssl"
+      },
+      {
+        "name": "🤖 Orchestration: MCP Project",
+        "path": "mcp-project-orchestrator"
+      },
+      {
+        "name": "📚 Documentation: OpenSSL Docs",
+        "path": "openssl-docs"
+      },
+      {
+        "name": "🌐 Integration: libcurl",
+        "path": "libcurl"
+      }
+    ],
+    "settings": {
+      "python.defaultInterpreterPath": "./venv/bin/python",
+      "python.terminal.activateEnvironment": true,
+      "cmake.configureOnOpen": true,
+      "cmake.buildDirectory": "${workspaceFolder}/build",
+      "conan.cmake.generator": "Ninja",
+      "files.associations": {
+        "conanfile.py": "python",
+        "*.profile": "ini"
+      },
+      "editor.formatOnSave": true
+    },
+    "extensions": {
+      "recommendations": [
+        "ms-python.python",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "ms-vscode.vscode-json",
+        "ms-vscode.vscode-yaml",
+        "github.copilot",
+        "github.copilot-chat",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode.vscode-docker",
+        "gruntfuggly.todo-tree",
+        "ms-vscode.test-adapter-converter",
+        "hbenl.vscode-test-explorer"
+      ]
+    },
+    "launch": {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "name": "Python: MCP Orchestrator",
+          "type": "debugpy",
+          "request": "launch",
+          "program": "${workspaceFolder:mcp-project-orchestrator}/src/mcp_project_orchestrator/__main__.py",
+          "console": "integratedTerminal",
+          "justMyCode": false
+        },
+        {
+          "name": "CMake: Debug OpenSSL",
+          "type": "cppdbg",
+          "request": "launch",
+          "program": "${workspaceFolder:openssl}/build/Debug/bin/openssl",
+          "args": [
+            "version"
+          ],
+          "stopAtEntry": false,
+          "cwd": "${workspaceFolder:openssl}",
+          "environment": [],
+          "externalConsole": false,
+          "MIMode": "gdb",
+          "setupCommands": [
+            {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+            }
+          ]
+        }
+      ]
+    },
+    "tasks": {
+      "version": "2.0.0",
+      "tasks": [
+        {
+          "label": "Setup Development Environment",
+          "type": "shell",
+          "command": "./scripts/setup-dev-env.sh",
+          "group": "build",
+          "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared"
+          }
+        },
+        {
+          "label": "Run Integration Tests",
+          "type": "shell",
+          "command": "./scripts/run-integration-tests.sh",
+          "group": "test",
+          "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared"
+          }
+        },
+        {
+          "label": "Deploy Cursor Configuration",
+          "type": "shell",
+          "command": "cd mcp-project-orchestrator && source venv/bin/activate && mcp-orchestrator deploy-cursor --project-type openssl",
+          "group": "build",
+          "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared"
+          }
+        }
+      ]
+    }
+  }

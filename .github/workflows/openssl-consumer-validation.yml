@@ -1,0 +1,88 @@
+name: OpenSSL Consumer Validation
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'conanfile.py'
+      - 'VERSION.dat'
+  pull_request:
+    paths:
+      - 'conanfile.py'
+      - 'VERSION.dat'
+  workflow_dispatch:
+
+jobs:
+  validate-consumer:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            consumer: cmake
+          - os: windows-latest
+            consumer: cmake
+          - os: macos-latest
+            consumer: cmake
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Conan
+        run: |
+          pip install conan>=2.0.0
+          conan profile detect --force
+
+      - name: Create test consumer
+        run: |
+          mkdir test-consumer
+          cd test-consumer
+          # Create a minimal CMake consumer
+          cat > CMakeLists.txt << 'EOF'
+cmake_minimum_required(VERSION 3.15)
+project(TestOpenSSL)
+
+find_package(OpenSSL REQUIRED)
+
+add_executable(test-openssl main.cpp)
+target_link_libraries(test-openssl OpenSSL::SSL OpenSSL::Crypto)
+EOF
+
+          cat > main.cpp << 'EOF'
+#include <openssl/ssl.h>
+#include <openssl/crypto.h>
+#include <iostream>
+
+int main() {
+    std::cout << "OpenSSL version: " << OpenSSL_version(OPENSSL_VERSION) << std::endl;
+    std::cout << "SSL library version: " << OpenSSL_version(OPENSSL_CFLAGS) << std::endl;
+    return 0;
+}
+EOF
+
+          cat > conanfile.txt << 'EOF'
+[requires]
+openssl/3.6.0
+
+[generators]
+CMakeDeps
+CMakeToolchain
+EOF
+
+      - name: Build test consumer
+        working-directory: test-consumer
+        run: |
+          conan install . --build=missing
+          cmake --preset conan-release
+          cmake --build --preset conan-release
+
+      - name: Run test consumer
+        working-directory: test-consumer
+        run: ./build/Release/test-openssl
+
+

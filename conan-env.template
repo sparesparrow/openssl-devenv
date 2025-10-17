@@ -1,0 +1,30 @@
+# Conan User/Channel Configuration Template
+# Copy this file to .conan-env and customize for your environment
+
+# Production/Stable Environment
+# CONAN_USER=sparesparrow
+# CONAN_CHANNEL=stable
+
+# Development Environment
+# CONAN_USER=sparesparrow
+# CONAN_CHANNEL=dev
+
+# Testing Environment
+# CONAN_USER=sparesparrow
+# CONAN_CHANNEL=testing
+
+# Custom Organization/Channel
+# CONAN_USER=your-org
+# CONAN_CHANNEL=your-channel
+
+# Environment-specific configurations
+# For CI/CD pipelines, these can be set as repository secrets or environment variables
+
+# GitHub Actions Example:
+# env:
+#   CONAN_USER: ${{ secrets.CONAN_USER || 'sparesparrow' }}
+#   CONAN_CHANNEL: ${{ secrets.CONAN_CHANNEL || 'stable' }}
+
+# Local Development Example:
+# export CONAN_USER=sparesparrow
+# export CONAN_CHANNEL=dev
