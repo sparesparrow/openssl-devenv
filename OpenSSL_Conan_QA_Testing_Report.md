@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This report documents the comprehensive testing and quality assurance process for the OpenSSL Conan package integration. The testing revealed significant compatibility issues with Conan 2.x that were successfully resolved through systematic debugging and code fixes.
+This report documents the comprehensive testing and quality assurance process for the OpenSSL Conan package integration. The testing revealed significan compatibility issues with Conan 2.x that were successfully resolved through systematic debugging and code fixes.
 
 ## Test Objectives
 

@@ -1,0 +1,61 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "(gdb) OpenSSL CLI",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/apps/openssl",
+      "args": ["version", "-a"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "${workspaceFolder}/build"
+        }
+      ],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    },
+    {
+      "name": "(gdb) FIPS Self-Test",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/apps/openssl",
+      "args": ["fips-selftest"],
+      "stopAtEntry": true,
+      "cwd": "${workspaceFolder}",
+      "environment": [
+        {
+          "name": "OPENSSL_CONF",
+          "value": "${workspaceFolder}/build/apps/openssl.cnf"
+        },
+        {
+          "name": "OPENSSL_MODULES",
+          "value": "${workspaceFolder}/build/providers"
+        }
+      ],
+      "externalConsole": false,
+      "MIMode": "gdb"
+    },
+    {
+      "name": "Python: Conan Recipe",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/../openssl-tools/conanfile.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${env:HOME}/.conan2"
+      }
+    }
+  ]
+}
