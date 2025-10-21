@@ -169,3 +169,6 @@ Potential follow-up improvements:
 ---
 
 **Ready for review**: This PR is ready for upstream review and addresses all community requirements for faster Windows builds and improved IDE integration.
+
+
+

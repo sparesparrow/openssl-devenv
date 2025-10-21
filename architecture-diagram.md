@@ -1,81 +1,125 @@
 # OpenSSL CI/CD Modernization - Architecture Diagram
 
+```mermaid
+graph TB
+    subgraph "🔧 Core Package"
+        A[🛠️ conanfile.py<br/>Python_requires Package]
+        B[🛠️ test_package/conanfile.py<br/>Package Validation]
+    end
+
+    subgraph "📦 Extensions"
+        C[🛠️ full_deploy_enhanced.py<br/>Enhanced Deployer<br/>SBOM + FIPS]
+        D[🛠️ analyzer.py<br/>Graph Analyzer<br/>Conflict Detection]
+    end
+
+    subgraph "🎮 Commands"
+        E[🛠️ cmd_build.py<br/>openssl:build<br/>Simplified Builds]
+        F[🛠️ cmd_graph.py<br/>openssl:graph<br/>Dependency Analysis]
+    end
+
+    subgraph "🔄 CI/CD Integration"
+        G[🛠️ openssl-ci-reusable.yml<br/>Reusable Workflow<br/>Multi-Platform]
+        H[🛠️ trigger-openssl.yml<br/>Cross-Repo Trigger<br/>Integration Tests]
+    end
+
+    subgraph "⚙️ Configuration"
+        I[🛠️ platform-config.yml<br/>Dev Environment<br/>Profile Management]
+    end
+
+    subgraph "📤 Distribution"
+        J[🛠️ upload-conan-package.py<br/>GitHub Release<br/>Package Distribution]
+    end
+
+    subgraph "🔧 Runtime"
+        K[🛠️ conanrunenv-release-x86_64.sh<br/>Runtime Environment<br/>Variable Setup]
+    end
+
+    %% Core Package Relations
+    A --> B
+    A --> C
+    A --> D
+    A --> E
+    A --> F
+
+    %% Extension Relations
+    C --> J
+    D --> F
+
+    %% Command Relations
+    E --> C
+    F --> D
+
+    %% CI/CD Relations
+    G --> E
+    H --> G
+
+    %% Configuration Relations
+    I --> G
+
+    %% Runtime Relations
+    K --> C
+
+```
+
+
 ## 🏗️ Corrected Architecture
 
 ```mermaid
 graph TD
-    subgraph Foundation["🔐 Foundation Layer" style fill:#e1f5fe]
-        BASE[openssl-conan-base<br/>1.0.0<br/>(Foundation Utils)]
-        FIPS[openssl-fips-policy<br/>140-3.1<br/>(FIPS Data + Certs)]
+    %% Foundation Layer
+    subgraph "🔐 Foundation Layer"
+        BASE["openssl-conan-base<br>1.0.0<br>(Foundation Utils)"]
+        FIPS["openssl-fips-policy<br>140-3.1<br>(FIPS Data + Certs)"]
     end
-    
-    subgraph Tooling["🛠️ Tooling Layer" style fill:#fff3e0]
-        TOOLS[openssl-tools<br/>1.0.0<br/>(Build Orchestration)]
+
+    %% Tooling Layer
+    subgraph "🛠️ Tooling Layer"
+        TOOLS["openssl-tools<br>1.0.0<br>(Build Orchestration)"]
     end
-    
-    subgraph Domain["🌐 Domain Layer" style fill:#f3e5f5]
-        OPENSSL[sparesparrow/openssl<br/>3.4.1<br/>(Forked Lib)]
+
+    %% Domain Layer
+    subgraph "🌐 Domain Layer"
+        OPENSSL["sparesparrow/openssl<br>3.4.1<br>(Forked Lib)"]
     end
-    
-    subgraph Artifacts["📦 Distribution" style fill:#e8f5e9]
-        CLOUDSMITH[(Cloudsmith<br/>sparesparrow-conan/openssl-conan)]
+
+    %% Distribution (Artifacts)
+    subgraph "📦 Distribution"
+        CLOUDSMITH["Cloudsmith<br>sparesparrow-conan/openssl-conan"]
     end
-    
-    subgraph Profiles["🎯 Build Profiles" style fill:#fce4ec]
-        P1[linux-gcc-release]
-        P2[linux-clang-release]
-        P3[windows-msvc2022]
-        P4[macos-arm64]
-        P5[macos-x86_64]
-        P6[fips-linux-gcc-release]
+
+    %% Build Profiles
+    subgraph "🎯 Build Profiles"
+        P1["linux-gcc-release"]
+        P2["linux-clang-release"]
+        P3["windows-msvc2022"]
+        P4["macos-arm64"]
+        P5["macos-x86_64"]
+        P6["fips-linux-gcc-release"]
     end
-    
-    subgraph CI["🔄 CI/CD Pipeline" style fill:#f1f8e9]
-        GHA[GitHub Actions]
-        BUILD[Build Matrix]
-        TEST[Testing Suite]
-        PUBLISH[Publish to Cloudsmith]
+
+    %% CI Pipeline
+    subgraph "🔄 CI/CD Pipeline"
+        GHA["GitHub Actions"]
+        BUILD["Build Matrix"]
+        TEST["Testing Suite"]
+        PUBLISH["Publish to Cloudsmith"]
     end
-    
+
+    %% Relations
     BASE --> CLOUDSMITH
     FIPS --> CLOUDSMITH
-    TOOLS -.requires.-> BASE
-    TOOLS -.requires.-> FIPS
+    TOOLS -.-> BASE
+    TOOLS -.-> FIPS
     TOOLS --> CLOUDSMITH
-    OPENSSL -.tool_requires.-> TOOLS
-    OPENSSL -.requires.-> FIPS
+    OPENSSL -.-> TOOLS
+    OPENSSL -.-> FIPS
     OPENSSL --> CLOUDSMITH
-    
+
     P1 --> BASE
     P1 --> FIPS
     P1 --> TOOLS
     P1 --> OPENSSL
-    
-    P2 --> BASE
-    P2 --> FIPS
-    P2 --> TOOLS
-    P2 --> OPENSSL
-    
-    P3 --> BASE
-    P3 --> FIPS
-    P3 --> TOOLS
-    P3 --> OPENSSL
-    
-    P4 --> BASE
-    P4 --> FIPS
-    P4 --> TOOLS
-    P4 --> OPENSSL
-    
-    P5 --> BASE
-    P5 --> FIPS
-    P5 --> TOOLS
-    P5 --> OPENSSL
-    
-    P6 --> BASE
-    P6 --> FIPS
-    P6 --> TOOLS
-    P6 --> OPENSSL
-    
+
     GHA --> BUILD
     BUILD --> TEST
     TEST --> PUBLISH

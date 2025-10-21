@@ -37,6 +37,29 @@ cp .env.example .env  # Edit with your CLOUDSMITH_API_KEY
 
 This environment uses Conan for C/C++ package management with user/channel support for organizing package versions across different environments.
 
+### Version Compatibility Matrix
+
+| Repository | Version | Channel | Dependencies | Purpose |
+|------------|---------|---------|--------------|---------|
+| **openssl-conan-base** | 1.0.1 | stable | None | Foundation utilities, profiles, Python runtime |
+| **openssl-fips-policy** | 140-3.2 | stable | None | FIPS 140-3 certificates and compliance data |
+| **openssl-tools** | 1.2.4 | stable | openssl-base/1.0.1+ | Build orchestration and tooling |
+| **openssl** | 4.0.0-dev | stable | openssl-tools/1.2.4+, openssl-fips-data/140-3.2+ | Core cryptographic library |
+
+### Dynamic Version Management
+
+The OpenSSL repository uses dynamic version reading from `VERSION.dat`:
+
+```python
+def set_version(self):
+    """Read version from VERSION.dat file"""
+    version_file = os.path.join(self.recipe_folder, "VERSION.dat")
+    if os.path.exists(version_file):
+        # Parse MAJOR, MINOR, PATCH, PRE_RELEASE_TAG
+        # Build semantic version: 4.0.0-dev
+        self.version = parsed_version
+```
+
 ### User/Channel Configuration
 
 ```bash

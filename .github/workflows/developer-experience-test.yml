@@ -1,241 +1,252 @@
 name: Developer Experience Test
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'bootstrap/**'
-      - '.vscode/**'
-      - 'scripts/**'
-      - 'docs/**'
-  pull_request:
-    branches: [main]
+    push:
+        branches: [main]
+        paths:
+            - "bootstrap/**"
+            - ".vscode/**"
+            - "scripts/**"
+            - "docs/**"
+    pull_request:
+        branches: [main]
 
 jobs:
-  test-bootstrap-script:
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, macos-13, windows-2022]
-        mode: [minimal, full, dev]
-    
-    runs-on: ${{ matrix.os }}
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: Test bootstrap script (Unix)
-        if: matrix.os != 'windows-2022'
-        run: |
-          cd bootstrap
-          python3 openssl-conan-init.py --${{ matrix.mode }} --dry-run
-      
-      - name: Test bootstrap script (Windows)
-        if: matrix.os == 'windows-2022'
-        run: |
-          cd bootstrap
-          python openssl-conan-init.py --${{ matrix.mode }} --dry-run
-      
-      - name: Verify VS Code configuration (dev mode)
-        if: matrix.mode == 'dev'
-        run: |
-          # Check VS Code files were created in dry-run mode
-          test -f .vscode/extensions.json || echo "extensions.json would be created"
-          test -f .vscode/settings.json || echo "settings.json would be created"
-          test -f .vscode/launch.json || echo "launch.json would be created"
+    test-bootstrap-script:
+        strategy:
+            matrix:
+                os: [ubuntu-22.04, macos-13, windows-2022]
+                mode: [minimal, full, dev]
 
-  test-vscode-integration:
-    runs-on: ubuntu-22.04
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Validate VS Code configuration
-        run: |
-          # Check JSON syntax
-          if [ -f .vscode/extensions.json ]; then
-            jq empty .vscode/extensions.json || (echo "Invalid extensions.json" && exit 1)
-          fi
-          
-          if [ -f .vscode/settings.json ]; then
-            jq empty .vscode/settings.json || (echo "Invalid settings.json" && exit 1)
-          fi
-          
-          if [ -f .vscode/launch.json ]; then
-            jq empty .vscode/launch.json || (echo "Invalid launch.json" && exit 1)
-          fi
-          
-          echo "✓ VS Code configuration validated"
-      
-      - name: Test IntelliSense helper
-        run: |
-          if [ -f "scripts/update-intellisense.py" ]; then
-            python3 scripts/update-intellisense.py --help
-            echo "✓ IntelliSense helper script functional"
-          fi
+        runs-on: ${{ matrix.os }}
 
-  test-documentation:
-    runs-on: ubuntu-22.04
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Validate documentation
-        run: |
-          # Check required documentation files
-          test -f docs/getting-started.md || (echo "Missing getting-started.md" && exit 1)
-          
-          # Check for common sections in getting-started
-          if [ -f docs/getting-started.md ]; then
-            grep -q "Quick Start" docs/getting-started.md || echo "Warning: Missing Quick Start section"
-            grep -q "Troubleshooting" docs/getting-started.md || echo "Warning: Missing Troubleshooting section"
-            grep -q "Architecture" docs/getting-started.md || echo "Warning: Missing Architecture section"
-          fi
-          
-          echo "✓ Documentation validated"
-      
-      - name: Test documentation links
-        run: |
-          if command -v markdown-link-check >/dev/null 2>&1; then
-            find docs/ -name "*.md" -exec markdown-link-check {} \;
-          else
-            echo "Skipping link check (markdown-link-check not available)"
-          fi
+        steps:
+            - uses: actions/checkout@v4
 
-  integration-test:
-    runs-on: ubuntu-22.04
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: Run integration test
-        run: |
-          # Create temporary directory for test
-          TEMP_DIR=$(mktemp -d)
-          cd "$TEMP_DIR"
-          
-          # Test bootstrap in minimal mode (doesn't require external deps)
-          python3 "$GITHUB_WORKSPACE/bootstrap/openssl-conan-init.py" --minimal --test-mode
-          
-          # Verify Conan installation
-          if command -v conan >/dev/null 2>&1; then
-            conan --version
-            echo "✓ Conan installed successfully"
-          else
-            echo "ℹ Conan would be installed (test mode)"
-          fi
-          
-          # Cleanup
-          cd "$GITHUB_WORKSPACE"
-          rm -rf "$TEMP_DIR"
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
 
-  measure-onboarding-time:
-    runs-on: ubuntu-22.04
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Measure onboarding time
-        run: |
-          echo "Measuring onboarding time..."
-          
-          start_time=$(date +%s)
-          
-          # Simulate fresh developer setup (dry-run mode)
-          python3 bootstrap/openssl-conan-init.py --full --dry-run
-          
-          end_time=$(date +%s)
-          duration=$((end_time - start_time))
-          
-          echo "Simulated onboarding time: ${duration} seconds"
-          
-          if [ $duration -lt 900 ]; then  # 15 minutes = 900 seconds
-            echo "✅ Onboarding time target met: ${duration}s < 900s"
-          else
-            echo "⚠️ Onboarding time target missed: ${duration}s > 900s"
-          fi
-          
-          # Add to step summary
-          echo "## Onboarding Performance" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value | Target | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|--------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Onboarding Time | ${duration}s | <900s | $([ $duration -lt 900 ] && echo "✅ Pass" || echo "❌ Fail") |" >> $GITHUB_STEP_SUMMARY
+            - name: Test bootstrap script (Unix)
+              if: matrix.os != 'windows-2022'
+              run: |
+                  cd bootstrap
+                  python3 openssl-conan-init.py --${{ matrix.mode }} --dry-run
 
-  create-development-report:
-    needs: [test-bootstrap-script, test-vscode-integration, test-documentation, integration-test, measure-onboarding-time]
-    runs-on: ubuntu-22.04
-    if: always()
-    
-    steps:
-      - name: Generate development report
-        run: |
-          mkdir -p reports
-          
-          cat > reports/developer-experience-report.md << 'EOF'
-          # Developer Experience Test Report
-          
-          **Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-          **Repository**: sparesparrow/openssl-devenv
-          **Commit**: ${{ github.sha }}
-          
-          ## Test Results Summary
-          
-          | Component | Status | Notes |
-          |-----------|--------|-------|
-          | Bootstrap Script | ${{ needs.test-bootstrap-script.result }} | Cross-platform testing |
-          | VS Code Integration | ${{ needs.test-vscode-integration.result }} | Configuration validation |
-          | Documentation | ${{ needs.test-documentation.result }} | Content and structure |
-          | Integration Test | ${{ needs.integration-test.result }} | End-to-end functionality |
-          | Onboarding Time | ${{ needs.measure-onboarding-time.result }} | Performance measurement |
-          
-          ## Key Metrics
-          
-          - **Target Onboarding Time**: <15 minutes
-          - **Supported Platforms**: Linux, macOS, Windows
-          - **Bootstrap Modes**: minimal, full, dev
-          
-          ## Success Criteria
-          
-          - [$([ "${{ needs.test-bootstrap-script.result }}" = "success" ] && echo "x" || echo " ")] Bootstrap works on all platforms
-          - [$([ "${{ needs.test-vscode-integration.result }}" = "success" ] && echo "x" || echo " ")] VS Code integration functional
-          - [$([ "${{ needs.test-documentation.result }}" = "success" ] && echo "x" || echo " ")] Documentation complete
-          - [$([ "${{ needs.measure-onboarding-time.result }}" = "success" ] && echo "x" || echo " ")] Onboarding time <15 minutes
-          
-          ## Next Steps
-          
-          $(if [ "${{ needs.test-bootstrap-script.result }}" != "success" ]; then
-            echo "- [ ] Fix bootstrap script issues"
-          fi)
-          $(if [ "${{ needs.test-vscode-integration.result }}" != "success" ]; then
-            echo "- [ ] Resolve VS Code configuration problems"
-          fi)
-          $(if [ "${{ needs.test-documentation.result }}" != "success" ]; then
-            echo "- [ ] Update documentation"
-          fi)
-          $(if [ "${{ needs.measure-onboarding-time.result }}" != "success" ]; then
-            echo "- [ ] Optimize onboarding performance"
-          fi)
-          
-          ## Links
-          
-          - [Bootstrap Script](bootstrap/openssl-conan-init.py)
-          - [VS Code Configuration](.vscode/)
-          - [Documentation](docs/getting-started.md)
-          - [Integration Tests](.github/workflows/developer-experience-test.yml)
-          EOF
-      
-      - name: Upload report
-        uses: actions/upload-artifact@v4
-        with:
-          name: developer-experience-report
-          path: reports/
-          retention-days: 30
+            - name: Test bootstrap script (Windows)
+              if: matrix.os == 'windows-2022'
+              run: |
+                  cd bootstrap
+                  python openssl-conan-init.py --${{ matrix.mode }} --dry-run
+
+            - name: Verify VS Code configuration (dev mode)
+              if: matrix.mode == 'dev'
+              run: |
+                  # Check VS Code files were created in dry-run mode
+                  test -f .vscode/extensions.json || echo "extensions.json would be created"
+                  test -f .vscode/settings.json || echo "settings.json would be created"
+                  test -f .vscode/launch.json || echo "launch.json would be created"
+
+    test-vscode-integration:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Validate VS Code configuration
+              run: |
+                  # Check JSON syntax
+                  if [ -f .vscode/extensions.json ]; then
+                    jq empty .vscode/extensions.json || (echo "Invalid extensions.json" && exit 1)
+                  fi
+
+                  if [ -f .vscode/settings.json ]; then
+                    jq empty .vscode/settings.json || (echo "Invalid settings.json" && exit 1)
+                  fi
+
+                  if [ -f .vscode/launch.json ]; then
+                    jq empty .vscode/launch.json || (echo "Invalid launch.json" && exit 1)
+                  fi
+
+                  echo "✓ VS Code configuration validated"
+
+            - name: Test IntelliSense helper
+              run: |
+                  if [ -f "scripts/update-intellisense.py" ]; then
+                    python3 scripts/update-intellisense.py --help
+                    echo "✓ IntelliSense helper script functional"
+                  fi
+
+    test-documentation:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Validate documentation
+              run: |
+                  # Check required documentation files
+                  test -f docs/getting-started.md || (echo "Missing getting-started.md" && exit 1)
+
+                  # Check for common sections in getting-started
+                  if [ -f docs/getting-started.md ]; then
+                    grep -q "Quick Start" docs/getting-started.md || echo "Warning: Missing Quick Start section"
+                    grep -q "Troubleshooting" docs/getting-started.md || echo "Warning: Missing Troubleshooting section"
+                    grep -q "Architecture" docs/getting-started.md || echo "Warning: Missing Architecture section"
+                  fi
+
+                  echo "✓ Documentation validated"
+
+            - name: Test documentation links
+              run: |
+                  if command -v markdown-link-check >/dev/null 2>&1; then
+                    find docs/ -name "*.md" -exec markdown-link-check {} \;
+                  else
+                    echo "Skipping link check (markdown-link-check not available)"
+                  fi
+
+    integration-test:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+
+            - name: Run integration test
+              run: |
+                  # Create temporary directory for test
+                  TEMP_DIR=$(mktemp -d)
+                  cd "$TEMP_DIR"
+
+                  # Test bootstrap in minimal mode (doesn't require external deps)
+                  python3 "$GITHUB_WORKSPACE/bootstrap/openssl-conan-init.py" --minimal --test-mode
+
+                  # Verify Conan installation
+                  if command -v conan >/dev/null 2>&1; then
+                    conan --version
+                    echo "✓ Conan installed successfully"
+                  else
+                    echo "ℹ Conan would be installed (test mode)"
+                  fi
+
+                  # Cleanup
+                  cd "$GITHUB_WORKSPACE"
+                  rm -rf "$TEMP_DIR"
+
+    measure-onboarding-time:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Measure onboarding time
+              run: |
+                  echo "Measuring onboarding time..."
+
+                  start_time=$(date +%s)
+
+                  # Simulate fresh developer setup (dry-run mode)
+                  python3 bootstrap/openssl-conan-init.py --full --dry-run
+
+                  end_time=$(date +%s)
+                  duration=$((end_time - start_time))
+
+                  echo "Simulated onboarding time: ${duration} seconds"
+
+                  if [ $duration -lt 900 ]; then  # 15 minutes = 900 seconds
+                    echo "✅ Onboarding time target met: ${duration}s < 900s"
+                  else
+                    echo "⚠️ Onboarding time target missed: ${duration}s > 900s"
+                  fi
+
+                  # Add to step summary
+                  echo "## Onboarding Performance" >> $GITHUB_STEP_SUMMARY
+                  echo "| Metric | Value | Target | Status |" >> $GITHUB_STEP_SUMMARY
+                  echo "|--------|-------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+                  echo "| Onboarding Time | ${duration}s | <900s | $([ $duration -lt 900 ] && echo "✅ Pass" || echo "❌ Fail") |" >> $GITHUB_STEP_SUMMARY
+
+    create-development-report:
+        needs:
+            [
+                test-bootstrap-script,
+                test-vscode-integration,
+                test-documentation,
+                integration-test,
+                measure-onboarding-time,
+            ]
+        runs-on: ubuntu-22.04
+        if: always()
+
+        steps:
+            - name: Generate development report
+              run: |
+                  mkdir -p reports
+
+                  cat > reports/developer-experience-report.md << 'EOF'
+                  # Developer Experience Test Report
+
+                  **Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+                  **Repository**: sparesparrow/openssl-devenv
+                  **Commit**: ${{ github.sha }}
+
+                  ## Test Results Summary
+
+                  | Component | Status | Notes |
+                  |-----------|--------|-------|
+                  | Bootstrap Script | ${{ needs.test-bootstrap-script.result }} | Cross-platform testing |
+                  | VS Code Integration | ${{ needs.test-vscode-integration.result }} | Configuration validation |
+                  | Documentation | ${{ needs.test-documentation.result }} | Content and structure |
+                  | Integration Test | ${{ needs.integration-test.result }} | End-to-end functionality |
+                  | Onboarding Time | ${{ needs.measure-onboarding-time.result }} | Performance measurement |
+
+                  ## Key Metrics
+
+                  - **Target Onboarding Time**: <15 minutes
+                  - **Supported Platforms**: Linux, macOS, Windows
+                  - **Bootstrap Modes**: minimal, full, dev
+
+                  ## Success Criteria
+
+                  - [$([ "${{ needs.test-bootstrap-script.result }}" = "success" ] && echo "x" || echo " ")] Bootstrap works on all platforms
+                  - [$([ "${{ needs.test-vscode-integration.result }}" = "success" ] && echo "x" || echo " ")] VS Code integration functional
+                  - [$([ "${{ needs.test-documentation.result }}" = "success" ] && echo "x" || echo " ")] Documentation complete
+                  - [$([ "${{ needs.measure-onboarding-time.result }}" = "success" ] && echo "x" || echo " ")] Onboarding time <15 minutes
+
+                  ## Next Steps
+
+                  $(if [ "${{ needs.test-bootstrap-script.result }}" != "success" ]; then
+                    echo "- [ ] Fix bootstrap script issues"
+                  fi)
+                  $(if [ "${{ needs.test-vscode-integration.result }}" != "success" ]; then
+                    echo "- [ ] Resolve VS Code configuration problems"
+                  fi)
+                  $(if [ "${{ needs.test-documentation.result }}" != "success" ]; then
+                    echo "- [ ] Update documentation"
+                  fi)
+                  $(if [ "${{ needs.measure-onboarding-time.result }}" != "success" ]; then
+                    echo "- [ ] Optimize onboarding performance"
+                  fi)
+
+                  ## Links
+
+                  - [Bootstrap Script](bootstrap/openssl-conan-init.py)
+                  - [VS Code Configuration](.vscode/)
+                  - [Documentation](docs/getting-started.md)
+                  - [Integration Tests](.github/workflows/developer-experience-test.yml)
+                  EOF
+
+            - name: Upload report
+              uses: actions/upload-artifact@v4
+              with:
+                  name: developer-experience-report
+                  path: reports/
+                  retention-days: 30
+
+
+
+

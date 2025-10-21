@@ -1,0 +1,53 @@
+name: Package Validation
+
+on:
+    workflow_dispatch:
+    push:
+        paths:
+            - "**/conanfile.py"
+
+jobs:
+    validate-packages:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.11"
+
+            - name: Install Conan
+              run: pip install conan
+
+            - name: Configure Conan
+              run: |
+                  conan remote add cloudsmith https://...
+                  conan remote login cloudsmith ...
+
+            - name: Build and validate openssl-base
+              run: |
+                  cd openssl-conan-base
+                  conan create . --build=missing
+                  python ../scripts/validate-conan-packages.py openssl-base/1.0.0
+
+            - name: Build and validate openssl-fips-data
+              run: |
+                  cd openssl-fips-policy
+                  conan create . --build=missing
+                  python ../scripts/validate-conan-packages.py openssl-fips-data/140-3.1
+
+            - name: Build and validate openssl-tools
+              run: |
+                  cd openssl-tools
+                  conan create . --build=missing
+                  python ../scripts/validate-conan-packages.py openssl-tools/1.2.0
+
+            - name: Build and validate openssl
+              run: |
+                  cd openssl
+                  conan create . --build=missing
+                  python ../scripts/validate-conan-packages.py openssl/3.6.0
+
+
+

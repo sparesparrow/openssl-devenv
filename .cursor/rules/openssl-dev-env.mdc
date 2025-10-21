@@ -16,6 +16,15 @@ This workspace contains 8 repositories forming a complete OpenSSL ecosystem:
 
 ### 🛠️ Tooling Layer  
 - **openssl-tools**: Build orchestration consuming foundation packages
+#### Mod
+- version_manager.py → openssl_tools/foundation/ - Semantic versioning with FIPS metadata
+sbom_generator.py → openssl_tools/security/ - CycloneDX SBOM generation with FIPS compliance
+profile_deployer.py → openssl_tools/foundation/ - Conan profile management
+artifactory_handler.py → openssl_tools/core/ - Artifactory/Cloudsmith integration
+quality_manager.py → openssl_tools/testing/ - Enterprise-grade code quality management
+fuzz_manager.py → openssl_tools/testing/ - Fuzz corpora package management
+conan_orchestrator.py → openssl_tools/automation/ - Advanced CI/CD automation
+bn_rand_range.py → openssl_tools/statistics/ - Statistical test data generation
 
 ### 🔬 Testing & Integration
 - **fuzz-corpora**: Fuzz testing corpora and test data

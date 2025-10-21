@@ -111,3 +111,6 @@ echo "- ✅ Invalid format rejected"
 echo "- ✅ Default Makefile behavior unchanged"
 echo ""
 echo "The Ninja build generator is working correctly!"
+
+
+
