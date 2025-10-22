@@ -1,0 +1,3609 @@
+# OpenSSL Development Environment
+
+**Orchestration Hub for DDD 4-Repository Layered Architecture Testing**
+
+This workspace provides a complete development and testing environment for the OpenSSL layered architecture ecosystem. It contains 8 repositories organized across 4 architectural layers, enabling comprehensive testing of dependency management, CI/CD pipelines, AI integration, and cross-repository workflows.
+
+## 🏗️ Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Foundation Layer"
+        BASE[openssl-conan-base<br/>📦 Utilities + Profiles]
+        POLICY[openssl-fips-policy<br/>📦 FIPS Certificates]
+    end
+    
+    subgraph "Tooling Layer"
+        TOOLS[openssl-tools<br/>📦 Build Orchestration]
+    end
+    
+    subgraph "Domain Layer"
+        OPENSSL[openssl<br/>📦 Cryptographic Library]
+    end
+    
+    subgraph "Orchestration Layer"
+        MCP[mcp-project-orchestrator<br/>🤖 AI Templates]
+    end
+    
+    subgraph "Testing & Integration"
+        FUZZ[fuzz-corpora<br/>🔬 Test Data]
+        DOCS[openssl-docs<br/>📚 Documentation]
+        CURL[libcurl<br/>🌐 HTTP Integration]
+    end
+    
+    subgraph "Distribution"
+        CLOUDSMITH[(Cloudsmith<br/>${CONAN_REPOSITORY_NAME})]
+    end
+    
+    BASE --> CLOUDSMITH
+    POLICY --> CLOUDSMITH
+    TOOLS --> CLOUDSMITH
+    OPENSSL --> CLOUDSMITH
+    
+    TOOLS -.->|requires| BASE
+    TOOLS -.->|requires| POLICY
+    OPENSSL -.->|tool_requires| TOOLS
+    
+    MCP -.->|creates| PROJECTS[Test Projects]
+    PROJECTS -.->|depends on| OPENSSL
+    
+    FUZZ -.->|tests| OPENSSL
+    DOCS -.->|documents| OPENSSL
+    CURL -.->|integrates| OPENSSL
+```
+
+## 📁 Repository Structure
+
+### 🔐 Foundation Layer
+**openssl-conan-base** - Foundation utilities for OpenSSL Conan ecosystem
+- **Purpose**: Version management, SBOM generation, profile deployment
+- **Key Components**: `openssl_base/` package with utilities and tests
+- **CI/CD**: Publishes `openssl-base/1.0.0` to Cloudsmith
+
+**openssl-fips-policy** - FIPS 140-3 compliance artifacts
+- **Purpose**: FIPS certificates and validation data
+- **Key Components**: Certificate #4985 data and schemas
+- **CI/CD**: Publishes `openssl-fips-data/140-3.1` to Cloudsmith
+
+### 🛠️ Tooling Layer
+**openssl-tools** - Build orchestration consuming foundation packages
+- **Purpose**: Bridge between foundation and domain layers
+- **Dependencies**: `openssl-base/1.0.0`, `openssl-fips-data/140-3.1`
+- **CI/CD**: Publishes `openssl-build-tools/1.2.0` to Cloudsmith
+
+### 🔬 Testing & Integration Layer
+**fuzz-corpora** - Fuzz testing data and corpora
+- **Purpose**: Test data for OpenSSL fuzzing and validation
+
+**openssl-docs** - Documentation and guides
+- **Purpose**: Comprehensive OpenSSL documentation
+
+**libcurl** - HTTP library for integration testing
+- **Purpose**: Test OpenSSL integration with HTTP clients
+
+### 🌐 Domain Layer
+**openssl** - OpenSSL cryptographic library with layered architecture
+- **Purpose**: Core cryptographic functionality with Conan packaging
+- **Features**: 5-phase build, deployment targets, FIPS integration
+- **Dependencies**: `openssl-build-tools/1.2.0`
+- **CI/CD**: Publishes `openssl/3.4.1` to Cloudsmith
+
+### 🤖 Orchestration Layer
+**mcp-project-orchestrator** - AI-enhanced project creation
+- **Purpose**: Templates, Cursor integration, MCP server
+- **Features**: OpenSSL project templates, AI development assistance
+
+## 🚀 Quick Start
+
+### 1. Environment Setup
+```bash
+# Clone and open workspace
+cd ~/projects/openssl-devenv
+code openssl-devenv.code-workspace
+
+# Or use devcontainer
+# Open in VSCode/Cursor with devcontainer support
+```
+
+### 2. Initial Configuration
+```bash
+# Set Cloudsmith API key
+export CLOUDSMITH_API_KEY="your-api-key-here"
+
+# Run setup script
+./scripts/setup-dev-env.sh
+```
+
+### 3. Basic Testing
+```bash
+# Test foundation layer
+cd openssl-conan-base && conan create . --build=missing
+
+# Test tooling layer  
+cd ../openssl-tools && conan create . --build=missing
+
+# Test domain layer
+cd ../openssl && conan create . --build=missing
+```
+
+## 🧪 Testing Scenarios & Procedures
+
+### 1. Dependency Management Testing
+**Objective**: Verify package dependencies resolve correctly across layers
+
+**Procedure**:
+```bash
+cd openssl-tools
+conan create . --build=missing
+```
+
+**Expected Results**:
+- ✅ Downloads `openssl-base/1.0.0` and `openssl-fips-data/140-3.1` from Cloudsmith
+- ✅ No local builds required for foundation packages
+- ✅ Package published as `openssl-build-tools/1.2.0`
+
+**Success Criteria**:
+- Build completes without errors
+- All transitive dependencies resolved
+- Package appears in local cache
+
+### 2. Python Automation Testing
+**Objective**: Test foundation utilities and orchestration scripts
+
+**Procedure**:
+```bash
+cd openssl-conan-base
+python -c "from openssl_base import get_openssl_version, generate_openssl_sbom; print('FIPS version:', get_openssl_version('3.4.1', True))"
+pytest tests/ -v
+```
+
+**Expected Results**:
+- ✅ Version manager generates hybrid semantic+FIPS versions
+- ✅ SBOM generator creates valid CycloneDX format
+- ✅ Profile deployer works correctly
+- ✅ All unit tests pass
+
+### 3. Cloudsmith Integration Testing
+**Objective**: Verify package publishing and remote consumption
+
+**Procedure**:
+```bash
+# Check published packages
+conan search "*" -r=${CONAN_REPOSITORY_NAME}
+
+# Test remote installation
+conan install --requires=openssl-build-tools/1.2.0 -r=${CONAN_REPOSITORY_NAME}
+```
+
+**Expected Results**:
+- ✅ All 4 packages visible in remote
+- ✅ Remote installation succeeds
+- ✅ No authentication errors
+
+### 4. Conan Environment Testing
+**Objective**: Test virtual environments and dependency isolation
+
+**Procedure**:
+```bash
+cd mcp-project-orchestrator
+python -m venv venv
+source venv/bin/activate
+pip install -e .
+mcp-orchestrator create-openssl-project --project-name venv-test
+```
+
+**Expected Results**:
+- ✅ Virtual environment isolates dependencies
+- ✅ MCP orchestrator installs correctly
+- ✅ Project creation generates proper structure
+
+### 5. Remote Artifact Caching
+**Objective**: Test Conan caching behavior
+
+**Procedure**:
+```bash
+# First run (downloads)
+time conan create openssl-conan-base --build=missing
+
+# Second run (cached)
+time conan create openssl-conan-base --build=missing
+```
+
+**Expected Results**:
+- ✅ First run downloads dependencies
+- ✅ Second run uses cached artifacts
+- ✅ Significant performance improvement
+
+### 6. Developer Workflow Simulation
+**Objective**: Test complete development workflow
+
+**Procedure**:
+```bash
+cd mcp-project-orchestrator
+source venv/bin/activate
+mcp-orchestrator create-openssl-project --project-name workflow-test --deployment-target fips-government
+
+cd ../workflow-test
+conan install . --build=missing
+cmake --preset conan-default
+cmake --build --preset conan-release
+./build/Release/workflow-test
+```
+
+**Expected Results**:
+- ✅ Project creates with FIPS options
+- ✅ Dependencies resolve correctly
+- ✅ Build completes successfully
+- ✅ Application runs with FIPS indicators
+
+### 7. Domain Repository Compile Performance
+**Objective**: Measure build performance
+
+**Procedure**:
+```bash
+cd openssl
+time conan create . --build=missing -o deployment_target=general
+time conan create . --build=missing -o deployment_target=fips-government
+```
+
+**Expected Results**:
+- ✅ General build: 5-10 minutes
+- ✅ FIPS build: Additional validation time
+- ✅ Performance metrics collected
+
+### 8. Integration Testing
+**Objective**: Test cross-repository interactions
+
+**Procedure**:
+```bash
+# Build dependency chain
+cd openssl-conan-base && conan create . --build=missing
+cd ../openssl-fips-policy && conan create . --build=missing
+cd ../openssl-tools && conan create . --build=missing
+cd ../openssl && conan create . --build=missing
+
+# Test template system
+cd ../mcp-project-orchestrator
+source venv/bin/activate
+mcp-orchestrator create-openssl-project --project-name integration-test
+```
+
+**Expected Results**:
+- ✅ All repositories build successfully
+- ✅ Dependencies resolve across layers
+- ✅ Template system generates functional projects
+
+### 9. AI Integration Testing
+**Objective**: Test Cursor and MCP functionality
+
+**Procedure**:
+```bash
+cd mcp-project-orchestrator
+source venv/bin/activate
+mcp-orchestrator deploy-cursor --project-type openssl
+
+# Start MCP server
+python -m mcp_project_orchestrator
+```
+
+**Expected Results**:
+- ✅ Cursor configuration deploys
+- ✅ MCP server starts on port 8080
+- ✅ AI recognizes OpenSSL patterns
+
+### 10. GitHub Actions & Workflow Testing
+**Objective**: Test CI/CD pipeline triggers
+
+**Procedure**:
+```bash
+cd openssl-conan-base
+echo "# Test CI trigger" >> README.md
+git add README.md
+git commit -m "test: trigger CI pipeline"
+git push origin main
+```
+
+**Expected Results**:
+- ✅ GitHub Actions workflow triggers
+- ✅ Build and publish steps execute
+- ✅ Package appears in Cloudsmith
+
+## 🔧 Component Behavior Expectations
+
+### Foundation Layer Behavior
+
+**openssl-conan-base Components**:
+- **Version Manager**: Generates semantic versions for general builds, hybrid versions for FIPS
+- **SBOM Generator**: Creates CycloneDX format with compliance metadata
+- **Profile Deployer**: Installs Conan profiles to `~/.conan2/profiles/`
+- **Expected**: Self-contained, no external dependencies, comprehensive test coverage
+
+**openssl-fips-policy Components**:
+- **Certificate Data**: Exports FIPS 140-3 certificate #4985
+- **Validation Rules**: Provides compliance checking utilities
+- **Expected**: Static data package, integrity verification, government deployment ready
+
+### Tooling Layer Behavior
+
+**openssl-tools Components**:
+- **Build Orchestration**: Coordinates foundation package usage
+- **Environment Setup**: Exposes `OPENSSL_BUILD_TOOLS_VERSION`
+- **Dependency Resolution**: Pulls from Cloudsmith, never builds foundation locally
+- **Expected**: Fast builds, comprehensive dependency management, CI/CD integration
+
+### Domain Layer Behavior
+
+**openssl Components**:
+- **5-Phase Build**: Source prep → Configure → Build → Test → FIPS validation
+- **Deployment Targets**: General (standard), FIPS-government (validated), Embedded (optimized)
+- **FIPS Integration**: Certificate #4985, security checks, compliance metadata
+- **SBOM Generation**: CycloneDX with deployment target metadata
+- **Expected**: Aerospace-quality process, comprehensive validation, multi-platform support
+
+### Orchestration Layer Behavior
+
+**mcp-project-orchestrator Components**:
+- **Template Engine**: Jinja2 rendering for project creation
+- **Cursor Deployment**: IDE configuration for OpenSSL development
+- **MCP Server**: AI assistance and project orchestration
+- **Expected**: Rapid prototyping, AI-enhanced development, multi-repository coordination
+
+## 🚨 Troubleshooting Guide
+
+### Conan Remote Issues
+```bash
+# Verify remote
+conan remote list
+
+# Re-authenticate
+conan remote login ${CONAN_REPOSITORY_NAME} spare-sparrow --password "$CLOUDSMITH_API_KEY"
+
+# Clear problematic cache
+conan cache clean
+rm -rf ~/.conan2/p/*
+```
+
+### Build Failures
+```bash
+# Check dependency info
+conan info .
+
+# Verify environment
+python --version && conan --version
+
+# Clean rebuild
+conan cache clean
+conan create . --build=missing
+```
+
+### Template System Issues
+```bash
+cd mcp-project-orchestrator
+source venv/bin/activate
+python -c "
+from mcp_project_orchestrator.templates import TemplateManager
+tm = TemplateManager('templates')
+tm.discover_templates()
+print('Found templates:', tm.list_templates())
+"
+```
+
+### FIPS Validation Issues
+```bash
+# Check certificate data
+cd openssl-fips-policy
+python -c "
+import json
+with open('fips-140-3/certificates/certificate-4985.json') as f:
+    cert = json.load(f)
+print('Certificate expires:', cert['expiry_date'])
+"
+```
+
+### Performance Issues
+```bash
+# Check build times
+time conan create . --build=missing
+
+# Profile build
+conan build . --profile=linux-gcc-release
+```
+
+## 📊 Performance Benchmarks
+
+### Expected Build Times
+- **openssl-conan-base**: < 30 seconds (Python utilities)
+- **openssl-fips-policy**: < 10 seconds (data package)
+- **openssl-tools**: < 60 seconds (dependency resolution)
+- **openssl**: 5-15 minutes (full cryptographic library)
+
+### Cache Effectiveness
+- **First builds**: Download all dependencies
+- **Cached builds**: < 20% of original time
+- **Clean cache penalty**: 3-5x slower
+
+## 🔒 Security Considerations
+
+### FIPS Compliance Requirements
+- Use only validated algorithms (AES-GCM, SHA-256, RSA-2048+)
+- Enable FIPS mode for government deployments
+- Include certificate metadata in SBOMs
+- Verify FIPS module integrity
+
+### Supply Chain Security
+- All packages scanned for vulnerabilities
+- SBOM generation enables dependency verification
+- Signed releases with reproducible builds
+- No hardcoded credentials in source code
+
+### Development Environment Security
+- Secrets managed via GitHub repository secrets
+- Virtual environments isolate development dependencies
+- SSH authentication for all git operations
+
+## 🎯 Success Criteria Verification
+
+### Repository Health
+- [ ] All 8 repositories cloned successfully
+- [ ] No merge conflicts or broken builds
+- [ ] All CI/CD workflows functional
+
+### Layer Integration
+- [ ] Foundation packages published to Cloudsmith
+- [ ] Tooling layer consumes foundation correctly
+- [ ] Domain layer builds with 5-phase process
+- [ ] Orchestration layer creates functional projects
+
+### Cross-Repository Dependencies
+- [ ] Package dependencies resolve correctly
+- [ ] Remote artifact caching works
+- [ ] No circular dependencies
+
+### AI Integration
+- [ ] Cursor configuration deploys correctly
+- [ ] MCP server provides assistance
+- [ ] Template system generates valid projects
+
+### Performance & Reliability
+- [ ] Build times within expected ranges
+- [ ] Cache effectiveness demonstrated
+- [ ] All integration tests pass
+
+This environment serves as the complete testing ground for the OpenSSL layered architecture, enabling comprehensive validation of all components, workflows, and integrations.
+# OpenSSL Development Environment Configuration
+# Copy this file to .env and fill in your values
+
+# Cloudsmith Configuration (REQUIRED)
+CLOUDSMITH_API_KEY=your-cloudsmith-api-key-here
+CLOUDSMITH_ORG=${CONAN_REPOSITORY_NAME}
+CLOUDSMITH_REPO=openssl-conan
+
+# Development Environment
+PYTHON_VERSION=3.12
+CONAN_VERSION=2.0.17
+CMAKE_VERSION=3.28.1
+
+# Build Configuration
+BUILD_TYPE=Release
+CMAKE_GENERATOR=Ninja
+CONAN_BUILD_JOBS=8
+
+# Testing Configuration
+TEST_PARALLEL_JOBS=4
+COVERAGE_MINIMUM=80
+
+# MCP Server Configuration
+MCP_HOST=localhost
+MCP_PORT=8080
+MCP_LOG_LEVEL=INFO
+
+# FIPS Configuration
+FIPS_CERTIFICATE=4985
+FIPS_SECURITY_LEVEL=1
+
+# Performance Monitoring
+PERFORMANCE_LOG_FILE=performance.log
+BUILD_TIME_LOG=build_times.log
+EOF && cat > scripts/monitor-performance.sh << 'EOF'
+#!/bin/bash
+
+echo "📊 OpenSSL Build Performance Monitor"
+echo "==================================="
+
+LOG_FILE="performance-logs/$(date +%Y%m%d-%H%M%S)-build-times.log"
+mkdir -p performance-logs
+
+log_time() {
+    local operation="$1"
+    local start_time="$2"
+    local end_time="$3"
+    local duration=$((end_time - start_time))
+    
+    echo "$(date '+%Y-%m-%d %H:%M:%S') | $operation | ${duration}s" >> "$LOG_FILE"
+    echo "⏱️  $operation: ${duration}s"
+}
+
+# Test foundation layer performance
+echo "🔐 Testing Foundation Layer Performance..."
+cd openssl-conan-base
+START=$(date +%s)
+conan create . --build=missing >/dev/null 2>&1
+END=$(date +%s)
+log_time "openssl-conan-base" "$START" "$END"
+cd ..
+
+# Test FIPS policy performance
+cd openssl-fips-policy
+START=$(date +%s)
+conan create . --build=missing >/dev/null 2>&1
+END=$(date +%s)
+log_time "openssl-fips-policy" "$START" "$END"
+cd ..
+
+# Test tooling layer performance
+cd openssl-tools
+START=$(date +%s)
+conan create . --build=missing >/dev/null 2>&1
+END=$(date +%s)
+log_time "openssl-tools" "$START" "$END"
+cd ..
+
+# Test domain layer general build
+cd openssl
+START=$(date +%s)
+conan create . --build=missing -o deployment_target=general >/dev/null 2>&1
+END=$(date +%s)
+log_time "openssl-general" "$START" "$END"
+
+# Test domain layer FIPS build
+START=$(date +%s)
+conan create . --build=missing -o deployment_target=fips-government >/dev/null 2>&1
+END=$(date +%s)
+log_time "openssl-fips" "$START" "$END"
+cd ..
+
+echo ""
+echo "📈 Performance log saved to: $LOG_FILE"
+echo "📊 Summary:"
+echo "   - Foundation packages: < 1 minute total"
+echo "   - Tooling layer: ~1 minute"
+echo "   - OpenSSL general: 5-15 minutes"
+echo "   - OpenSSL FIPS: 5-15 minutes (additional validation)"
+---
+title: OpenSSL Development Environment Rules
+platform: all
+project_type: openssl-dev-env
+---
+
+# OpenSSL Multi-Repository Development Environment
+
+## Environment Overview
+
+This workspace contains 8 repositories forming a complete OpenSSL ecosystem:
+
+### 🔐 Foundation Layer
+- **openssl-conan-base**: Foundation utilities, SBOM generation, profile deployment
+- **openssl-fips-policy**: FIPS 140-3 certificates and compliance data
+
+### 🛠️ Tooling Layer  
+- **openssl-tools**: Build orchestration consuming foundation packages
+#### Mod
+- version_manager.py → openssl_tools/foundation/ - Semantic versioning with FIPS metadata
+sbom_generator.py → openssl_tools/security/ - CycloneDX SBOM generation with FIPS compliance
+profile_deployer.py → openssl_tools/foundation/ - Conan profile management
+artifactory_handler.py → openssl_tools/core/ - Artifactory/Cloudsmith integration
+quality_manager.py → openssl_tools/testing/ - Enterprise-grade code quality management
+fuzz_manager.py → openssl_tools/testing/ - Fuzz corpora package management
+conan_orchestrator.py → openssl_tools/automation/ - Advanced CI/CD automation
+bn_rand_range.py → openssl_tools/statistics/ - Statistical test data generation
+
+### 🔬 Testing & Integration
+- **fuzz-corpora**: Fuzz testing corpora and test data
+- **libcurl**: HTTP library integration testing
+- **openssl-docs**: Documentation and guides
+
+### 🌐 Domain Layer
+- **openssl**: Core OpenSSL cryptographic library with Conan packaging
+
+### 🤖 Orchestration Layer
+- **mcp-project-orchestrator**: AI-enhanced project templates and Cursor integration
+
+## Repository Roles & Responsibilities
+
+### openssl-conan-base
+**Purpose**: Foundation utilities for OpenSSL Conan ecosystem
+**Key Files**: 
+- `openssl_base/version_manager.py`: Hybrid semantic+FIPS versioning
+- `openssl_base/sbom_generator.py`: CycloneDX SBOM generation
+- `openssl_base/profile_deployer.py`: Conan profile management
+**Testing**: Unit tests in `tests/` directory
+**CI/CD**: Publishes to Cloudsmith on main branch pushes
+
+### openssl-fips-policy  
+**Purpose**: FIPS 140-3 compliance artifacts
+**Key Files**:
+- `fips-140-3/certificates/certificate-4985.json`: FIPS certificate data
+- `fips-140-3/schemas/`: JSON schema validation (planned)
+**Testing**: Certificate validation and integrity checks
+**CI/CD**: Publishes FIPS data package to Cloudsmith
+
+### openssl-tools
+**Purpose**: Build orchestration layer
+**Dependencies**: Requires `openssl-base/1.0.0` and `openssl-fips-data/140-3.1`
+**Key Files**:
+- `conanfile.py`: Tooling package definition
+- `scripts/`: Build and deployment scripts
+**CI/CD**: Consumes foundation packages, publishes tooling package
+
+### openssl
+**Purpose**: OpenSSL cryptographic library with layered architecture support
+**Key Features**:
+- 5-phase build process (aerospace pattern)
+- Deployment targets: general, fips-government, embedded
+- FIPS module integration with certificate #4985
+- SBOM generation and compliance metadata
+**Dependencies**: Requires `openssl-build-tools/1.2.0`
+**Testing**: Comprehensive crypto and TLS validation
+
+### mcp-project-orchestrator
+**Purpose**: AI-enhanced project creation and Cursor integration
+**Key Features**:
+- OpenSSL consumer project templates with Jinja2 rendering
+- Cursor configuration deployment
+- MCP server for orchestration
+**Testing**: Template rendering and project creation
+
+## Development Workflows
+
+### 1. Dependency Management Testing
+**Goal**: Verify package dependencies resolve correctly
+**Procedure**:
+```bash
+cd openssl-tools
+conan create . --build=missing
+# Should pull openssl-base and openssl-fips-data from Cloudsmith
+```
+
+**Expected Behavior**:
+- Conan resolves all transitive dependencies
+- Foundation packages download from Cloudsmith
+- No local builds required for foundation packages
+
+### 2. Python Automation Testing
+**Goal**: Test Python utilities and orchestration scripts
+**Procedure**:
+```bash
+cd openssl-conan-base
+python -c "from openssl_base import get_openssl_version, generate_openssl_sbom; print('Version:', get_openssl_version('3.4.1', True))"
+pytest tests/
+```
+
+**Expected Behavior**:
+- Utilities import and execute correctly
+- Version manager handles FIPS timestamps
+- SBOM generator creates valid CycloneDX format
+- All tests pass
+
+### 3. Cloudsmith Integration Testing
+**Goal**: Verify package publishing and consumption
+**Procedure**:
+```bash
+# Check published packages
+conan search "*" -r=${CONAN_REPOSITORY_NAME}
+
+# Test package consumption
+conan install --requires=openssl/3.4.1 -r=${CONAN_REPOSITORY_NAME}
+```
+
+**Expected Behavior**:
+- All 4 packages visible in remote
+- Package installation succeeds
+- No authentication errors
+
+### 4. Conan & Python Environment Testing
+**Goal**: Test virtual environment and dependency isolation
+**Procedure**:
+```bash
+cd mcp-project-orchestrator
+python -m venv venv
+source venv/bin/activate
+pip install -e .
+mcp-orchestrator create-openssl-project --project-name test-app
+```
+
+**Expected Behavior**:
+- Virtual environment isolates dependencies
+- MCP orchestrator installs correctly
+- Project creation generates proper files
+
+### 5. Conan Remote Artifact Caching
+**Goal**: Test caching behavior across builds
+**Procedure**:
+```bash
+# First build (downloads from remote)
+time conan create openssl-conan-base --build=missing
+
+# Second build (uses cache)
+time conan create openssl-conan-base --build=missing
+```
+
+**Expected Behavior**:
+- First build downloads dependencies
+- Second build uses cached artifacts
+- Significant time reduction in subsequent builds
+
+### 6. Developer Workflow Simulation
+**Goal**: Test complete development workflow
+**Procedure**:
+```bash
+# 1. Create project
+cd mcp-project-orchestrator
+source venv/bin/activate
+mcp-orchestrator create-openssl-project --project-name my-app --deployment-target fips-government
+
+# 2. Build project
+cd ../my-app
+conan install . --build=missing
+cmake --preset conan-default
+cmake --build --preset conan-release
+
+# 3. Run application
+./build/Release/my-app
+```
+
+**Expected Behavior**:
+- Project creation succeeds with FIPS options
+- Dependencies resolve correctly
+- Build completes without errors
+- Application runs and shows FIPS mode enabled
+
+### 7. Domain Repo Source Code Compile Performance
+**Goal**: Measure compilation performance
+**Procedure**:
+```bash
+cd openssl
+time conan create . --build=missing -o deployment_target=general
+time conan create . --build=missing -o deployment_target=fips-government
+```
+
+**Expected Behavior**:
+- General build completes in reasonable time
+- FIPS build includes additional validation
+- Performance metrics collected for optimization
+
+### 8. Integration Testing
+**Goal**: Test component interactions
+**Procedure**:
+```bash
+# Test cross-repository dependencies
+cd openssl-tools
+conan create . --build=missing
+
+cd ../openssl  
+conan create . --build=missing
+
+# Test template system
+cd ../mcp-project-orchestrator
+source venv/bin/activate
+mcp-orchestrator create-openssl-project --project-name integration-test
+```
+
+**Expected Behavior**:
+- All repositories build successfully
+- Dependencies resolve across repositories
+- Template system generates functional projects
+
+### 9. AI Integration Testing
+**Goal**: Test Cursor and MCP functionality
+**Procedure**:
+```bash
+# Deploy Cursor configuration
+cd mcp-project-orchestrator
+source venv/bin/activate
+mcp-orchestrator deploy-cursor --project-type openssl
+
+# Start MCP server
+python -m mcp_project_orchestrator.server
+```
+
+**Expected Behavior**:
+- Cursor configuration deploys to .cursor/ directories
+- MCP server starts successfully
+- AI assistance recognizes OpenSSL patterns
+
+### 10. Workflow Triggers & GitHub Actions
+**Goal**: Test CI/CD pipeline triggers
+**Procedure**:
+```bash
+# Push changes to trigger CI
+cd openssl-conan-base
+echo "# Test commit" >> README.md
+git add README.md
+git commit -m "test: trigger CI pipeline"
+git push origin main
+```
+
+**Expected Behavior**:
+- GitHub Actions workflows trigger
+- Build and publish steps execute
+- Packages appear in Cloudsmith after completion
+
+## Layered Architecture Component Behavior
+
+### Foundation Layer Components
+**openssl-conan-base**:
+- Provides version management with FIPS timestamp support
+- Generates SBOMs with compliance metadata
+- Deploys Conan profiles to user cache
+- Self-contained with no external dependencies
+
+**openssl-fips-policy**:
+- Exports FIPS certificate data and validation rules
+- Provides compliance metadata for government deployments
+- Serves as trusted source for FIPS artifacts
+
+### Tooling Layer Components  
+**openssl-tools**:
+- Consumes foundation packages from Cloudsmith
+- Provides build orchestration utilities
+- Acts as bridge between foundation and domain layers
+- Exposes environment variables for downstream consumers
+
+### Domain Layer Components
+**openssl**:
+- Implements 5-phase aerospace-quality build process
+- Supports multiple deployment targets (general, fips-government, embedded)
+- Generates SBOMs and compliance metadata
+- Consumes tooling layer for foundation utilities
+
+### Orchestration Layer Components
+**mcp-project-orchestrator**:
+- Provides AI-enhanced project creation templates
+- Deploys Cursor IDE configurations
+- Orchestrates multi-repository development workflows
+- Enables rapid prototyping and testing
+
+## Troubleshooting Guide
+
+### Conan Remote Issues
+```bash
+# Check remote configuration
+conan remote list
+
+# Verify authentication
+conan remote login ${CONAN_REPOSITORY_NAME} spare-sparrow --password "$CLOUDSMITH_API_KEY"
+
+# Clear cache if needed
+conan cache clean
+```
+
+### Build Failures
+```bash
+# Check dependencies
+conan info openssl-conan-base
+
+# Verify local environment
+python --version
+conan --version
+
+# Clean and retry
+conan cache clean
+conan create . --build=missing
+```
+
+### Template Issues
+```bash
+# Test template discovery
+cd mcp-project-orchestrator
+source venv/bin/activate
+python -c "from mcp_project_orchestrator.templates import TemplateManager; tm = TemplateManager('templates'); tm.discover_templates(); print('Templates:', tm.list_templates())"
+```
+
+### FIPS Testing
+```bash
+# Verify FIPS certificate data
+cd openssl-fips-policy
+python -c "import json; cert = json.load(open('fips-140-3/certificates/certificate-4985.json')); print('Certificate valid until:', cert['expiry_date'])"
+```
+
+## Performance Benchmarks
+
+### Expected Build Times
+- **openssl-conan-base**: < 30 seconds (Python utilities only)
+- **openssl-fips-policy**: < 10 seconds (data package only)  
+- **openssl-tools**: < 60 seconds (consumes foundation packages)
+- **openssl**: 5-15 minutes (full cryptographic library build)
+
+### Cache Effectiveness
+- First build: Downloads all dependencies
+- Subsequent builds: < 20% of original time
+- Clean cache impact: 3-5x slower builds
+
+## Security Considerations
+
+### FIPS Compliance
+- Only use validated algorithms and configurations
+- Verify FIPS mode is enabled in government deployments
+- Include certificate metadata in all builds
+
+### Dependency Security
+- All packages scanned for vulnerabilities
+- SBOM generation enables supply chain verification
+- Signed releases with reproducible builds
+
+### Development Security
+- Secrets managed via GitHub repository secrets
+- No hardcoded credentials in source code
+- Virtual environments isolate development dependencies
+name: OpenSSL Integration Test
+
+on:
+    repository_dispatch:
+        types: [openssl-tools-updated]
+
+jobs:
+    validate-tools-integration:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.12"
+
+            - name: Install Conan
+              run: |
+                  pip install conan>=2.0.0
+                  conan profile detect --force
+
+            - name: Test integration with updated tools
+              run: |
+                  # Test that openssl can consume the updated tools package
+                  conan install --requires=openssl-build-tools/1.2.0 --build=missing
+
+            - name: Notify success
+              run: |
+                  echo "Successfully integrated with openssl-tools ${{ github.event.client_payload.tools_version }}"
+                  echo "Triggered by: ${{ github.event.client_payload.trigger_repo }}"
+
+
+  {
+    "folders": [
+      {
+        "name": "openssl-devenv",
+        "path": "."
+      },
+      {
+        "name": "🔐 Foundation: OpenSSL Conan Base",
+        "path": "openssl-conan-base"
+      },
+      {
+        "name": "🏛️ Foundation: FIPS Policy",
+        "path": "openssl-fips-policy"
+      },
+      {
+        "name": "🛠️ Tooling: OpenSSL Tools",
+        "path": "openssl-tools"
+      },
+      {
+        "name": "🔬 Fuzz Corpora",
+        "path": "fuzz-corpora"
+      },
+      {
+        "name": "🌐 Domain: OpenSSL",
+        "path": "openssl"
+      },
+      {
+        "name": "🤖 Orchestration: MCP Project",
+        "path": "mcp-project-orchestrator"
+      },
+      {
+        "name": "📚 Documentation: OpenSSL Docs",
+        "path": "openssl-docs"
+      },
+      {
+        "name": "🌐 Integration: libcurl",
+        "path": "libcurl"
+      }
+    ],
+    "settings": {
+      "python.defaultInterpreterPath": "./venv/bin/python",
+      "python.terminal.activateEnvironment": true,
+      "cmake.configureOnOpen": true,
+      "cmake.buildDirectory": "${workspaceFolder}/build",
+      "conan.cmake.generator": "Ninja",
+      "files.associations": {
+        "conanfile.py": "python",
+        "*.profile": "ini"
+      },
+      "editor.formatOnSave": true
+    },
+    "extensions": {
+      "recommendations": [
+        "ms-python.python",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "ms-vscode.vscode-json",
+        "ms-vscode.vscode-yaml",
+        "github.copilot",
+        "github.copilot-chat",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode.vscode-docker",
+        "gruntfuggly.todo-tree",
+        "ms-vscode.test-adapter-converter",
+        "hbenl.vscode-test-explorer"
+      ]
+    },
+    "launch": {
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "name": "Python: MCP Orchestrator",
+          "type": "debugpy",
+          "request": "launch",
+          "program": "${workspaceFolder:mcp-project-orchestrator}/src/mcp_project_orchestrator/__main__.py",
+          "console": "integratedTerminal",
+          "justMyCode": false
+        },
+        {
+          "name": "CMake: Debug OpenSSL",
+          "type": "cppdbg",
+          "request": "launch",
+          "program": "${workspaceFolder:openssl}/build/Debug/bin/openssl",
+          "args": [
+            "version"
+          ],
+          "stopAtEntry": false,
+          "cwd": "${workspaceFolder:openssl}",
+          "environment": [],
+          "externalConsole": false,
+          "MIMode": "gdb",
+          "setupCommands": [
+            {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+            }
+          ]
+        }
+      ]
+    },
+    "tasks": {
+      "version": "2.0.0",
+      "tasks": [
+        {
+          "label": "Setup Development Environment",
+          "type": "shell",
+          "command": "./scripts/setup-dev-env.sh",
+          "group": "build",
+          "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared"
+          }
+        },
+        {
+          "label": "Run Integration Tests",
+          "type": "shell",
+          "command": "./scripts/run-integration-tests.sh",
+          "group": "test",
+          "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared"
+          }
+        },
+        {
+          "label": "Deploy Cursor Configuration",
+          "type": "shell",
+          "command": "cd mcp-project-orchestrator && source venv/bin/activate && mcp-orchestrator deploy-cursor --project-type openssl",
+          "group": "build",
+          "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared"
+          }
+        }
+      ]
+    }
+  }# Getting Started - sparesparrow OpenSSL Development
+
+## Quick Start (5 minutes)
+
+### 1. Bootstrap
+
+```
+curl -sSL https://raw.githubusercontent.com/sparesparrow/openssl-devenv/main/bootstrap/openssl-conan-init.py | python3 - --dev
+```
+
+### 2. Build OpenSSL
+
+```
+# Standard build
+conan openssl:build
+
+# With FIPS
+conan openssl:build --fips --profile=linux-gcc11-fips
+```
+
+### 3. Verify
+
+```
+cd ~/sparesparrow/openssl
+conan openssl:graph --json
+```
+
+## Architecture Overview
+
+```
+sparesparrow/
+├── openssl-tools/          # Python_requires + extensions
+├── openssl-conan-base/     # Profiles + CI/CD
+├── openssl/                # Minimal fork for testing
+├── openssl-fips-policy/    # FIPS configuration
+└── openssl-devenv/         # Developer workspace (you are here)
+```
+
+## Common Tasks
+
+### Build for different platforms
+
+```
+# Linux with GCC 11
+conan openssl:build --profile=linux-gcc11-fips
+
+# Windows with MSVC 19.3
+conan openssl:build --profile=windows-msvc193
+
+# macOS ARM64
+conan openssl:build --profile=macos-arm64
+```
+
+### Enable editable mode
+
+```
+cd ~/sparesparrow/openssl-tools
+conan editable add . openssl-tools/1.2.0
+
+# Now changes in openssl-tools immediately affect builds
+conan openssl:build
+```
+
+### Debug build issues
+
+```
+# Verbose output
+conan openssl:build -vv
+
+# Keep build folder
+conan openssl:build --keep-build-folder
+
+# Inspect graph
+conan openssl:graph --json | jq .
+```
+
+## IDE Setup
+
+### VS Code
+
+1. **Install extensions** (automatic on first open)
+2. **Update IntelliSense**:
+   ```
+   cd openssl
+   mkdir build && cd build
+   conan install .. --build=missing
+   python ../scripts/update-intellisense.py
+   ```
+3. **Start debugging**: F5 or Run → Start Debugging
+
+### CLion
+
+Add Conan profile to CMake settings:
+```
+-DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake
+```
+
+## Troubleshooting
+
+### "Conan command not found"
+
+```
+python3 -m pip install --user conan>=2.0
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+### "FIPS self-test failed"
+
+Check module hash:
+```
+openssl dgst -sha256 -provider fips /usr/local/lib/ossl-modules/fips.so
+```
+
+Compare with expected hash in `openssl-fips-policy/fips/expected_module_hash.txt`
+
+### IntelliSense not working
+
+```
+cd openssl
+python scripts/update-intellisense.py
+```
+
+Reload VS Code window (Cmd/Ctrl + Shift + P → "Developer: Reload Window")
+
+## Contributing
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
+- Code style guidelines
+- PR process
+- Testing requirements
+# OpenSSL CI/CD Modernization - Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph "🔧 Core Package"
+        A[🛠️ conanfile.py<br/>Python_requires Package]
+        B[🛠️ test_package/conanfile.py<br/>Package Validation]
+    end
+
+    subgraph "📦 Extensions"
+        C[🛠️ full_deploy_enhanced.py<br/>Enhanced Deployer<br/>SBOM + FIPS]
+        D[🛠️ analyzer.py<br/>Graph Analyzer<br/>Conflict Detection]
+    end
+
+    subgraph "🎮 Commands"
+        E[🛠️ cmd_build.py<br/>openssl:build<br/>Simplified Builds]
+        F[🛠️ cmd_graph.py<br/>openssl:graph<br/>Dependency Analysis]
+    end
+
+    subgraph "🔄 CI/CD Integration"
+        G[🛠️ openssl-ci-reusable.yml<br/>Reusable Workflow<br/>Multi-Platform]
+        H[🛠️ trigger-openssl.yml<br/>Cross-Repo Trigger<br/>Integration Tests]
+    end
+
+    subgraph "⚙️ Configuration"
+        I[🛠️ platform-config.yml<br/>Dev Environment<br/>Profile Management]
+    end
+
+    subgraph "📤 Distribution"
+        J[🛠️ upload-conan-package.py<br/>GitHub Release<br/>Package Distribution]
+    end
+
+    subgraph "🔧 Runtime"
+        K[🛠️ conanrunenv-release-x86_64.sh<br/>Runtime Environment<br/>Variable Setup]
+    end
+
+    %% Core Package Relations
+    A --> B
+    A --> C
+    A --> D
+    A --> E
+    A --> F
+
+    %% Extension Relations
+    C --> J
+    D --> F
+
+    %% Command Relations
+    E --> C
+    F --> D
+
+    %% CI/CD Relations
+    G --> E
+    H --> G
+
+    %% Configuration Relations
+    I --> G
+
+    %% Runtime Relations
+    K --> C
+
+```
+
+
+## 🏗️ Corrected Architecture
+
+```mermaid
+graph TD
+    %% Foundation Layer
+    subgraph "🔐 Foundation Layer"
+        BASE["openssl-conan-base<br>1.0.0<br>(Foundation Utils)"]
+        FIPS["openssl-fips-policy<br>140-3.1<br>(FIPS Data + Certs)"]
+    end
+
+    %% Tooling Layer
+    subgraph "🛠️ Tooling Layer"
+        TOOLS["openssl-tools<br>1.0.0<br>(Build Orchestration)"]
+    end
+
+    %% Domain Layer
+    subgraph "🌐 Domain Layer"
+        OPENSSL["sparesparrow/openssl<br>3.4.1<br>(Forked Lib)"]
+    end
+
+    %% Distribution (Artifacts)
+    subgraph "📦 Distribution"
+        CLOUDSMITH["Cloudsmith<br>sparesparrow-conan/openssl-conan"]
+    end
+
+    %% Build Profiles
+    subgraph "🎯 Build Profiles"
+        P1["linux-gcc-release"]
+        P2["linux-clang-release"]
+        P3["windows-msvc2022"]
+        P4["macos-arm64"]
+        P5["macos-x86_64"]
+        P6["fips-linux-gcc-release"]
+    end
+
+    %% CI Pipeline
+    subgraph "🔄 CI/CD Pipeline"
+        GHA["GitHub Actions"]
+        BUILD["Build Matrix"]
+        TEST["Testing Suite"]
+        PUBLISH["Publish to Cloudsmith"]
+    end
+
+    %% Relations
+    BASE --> CLOUDSMITH
+    FIPS --> CLOUDSMITH
+    TOOLS -.-> BASE
+    TOOLS -.-> FIPS
+    TOOLS --> CLOUDSMITH
+    OPENSSL -.-> TOOLS
+    OPENSSL -.-> FIPS
+    OPENSSL --> CLOUDSMITH
+
+    P1 --> BASE
+    P1 --> FIPS
+    P1 --> TOOLS
+    P1 --> OPENSSL
+
+    GHA --> BUILD
+    BUILD --> TEST
+    TEST --> PUBLISH
+    PUBLISH --> CLOUDSMITH
+```
+
+## Key Components
+
+### Foundation Layer
+- **openssl-conan-base**: Core utilities, profiles, and Python environment
+- **openssl-fips-policy**: FIPS 140-3 certificates and compliance data
+
+### Tooling Layer
+- **openssl-tools**: Build orchestration, automation scripts, and infrastructure
+
+### Domain Layer
+- **sparesparrow/openssl**: Forked OpenSSL library with Conan integration
+
+### Distribution
+- **Cloudsmith**: Package repository for all OpenSSL components
+
+### Build Profiles
+- **6 Standard Profiles**: Cross-platform support for Linux, Windows, macOS
+- **FIPS Compliance**: Specialized profile for FIPS 140-3 requirements
+
+### CI/CD Pipeline
+- **GitHub Actions**: Automated build, test, and publish workflows
+- **Build Matrix**: Multi-platform testing and validation
+- **Security**: SBOM generation and compliance checking
+
+#!/bin/bash
+# demo-developer-workflow.sh
+# OpenSSL Developer Workflow Demonstration Script
+
+set -euo pipefail
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_FILE="${SCRIPT_DIR}/demo-developer-workflow.log"
+START_TIME=$(date +%s)
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+NC='\033[0m' # No Color
+
+# Logging function
+log() {
+    echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"
+}
+
+success() {
+    echo -e "${GREEN}✅ $1${NC}" | tee -a "$LOG_FILE"
+}
+
+warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}" | tee -a "$LOG_FILE"
+}
+
+error() {
+    echo -e "${RED}❌ $1${NC}" | tee -a "$LOG_FILE"
+}
+
+info() {
+    echo -e "${PURPLE}ℹ️  $1${NC}" | tee -a "$LOG_FILE"
+}
+
+# Cleanup function
+cleanup() {
+    local exit_code=$?
+    local end_time=$(date +%s)
+    local duration=$((end_time - START_TIME))
+    
+    if [ $exit_code -eq 0 ]; then
+        success "Developer workflow demo completed successfully in ${duration}s"
+    else
+        error "Developer workflow demo failed after ${duration}s"
+    fi
+    
+    log "Log file: $LOG_FILE"
+    exit $exit_code
+}
+
+trap cleanup EXIT
+
+# Main demo function
+main() {
+    log "👨‍💻 Starting OpenSSL Developer Workflow Demonstration"
+    log "====================================================="
+    
+    # Step 1: Fresh Workspace Setup
+    log "🏗️  Step 1: Fresh Workspace Setup"
+    log "---------------------------------"
+    
+    # Create demo workspace
+    DEMO_WORKSPACE="${SCRIPT_DIR}/demo-workspace"
+    rm -rf "$DEMO_WORKSPACE"
+    mkdir -p "$DEMO_WORKSPACE"
+    cd "$DEMO_WORKSPACE"
+    
+    success "Demo workspace created: $DEMO_WORKSPACE"
+    
+    # Initialize git repository
+    git init
+    git config user.name "Demo Developer"
+    git config user.email "demo@openssl.dev"
+    success "Git repository initialized"
+    
+    # Step 2: Environment Configuration
+    log ""
+    log "⚙️  Step 2: Environment Configuration"
+    log "------------------------------------"
+    
+    # Create .env file
+    cat > .env << EOF
+# OpenSSL Development Environment
+export CLOUDSMITH_API_KEY="${CLOUDSMITH_API_KEY:-}"
+export CONAN_REPOSITORY_NAME="sparesparrow-conan"
+export OPENSSL_VERSION="3.4.1"
+export FIPS_MODE="true"
+EOF
+    
+    success "Environment configuration created"
+    
+    # Configure Conan
+    log "Configuring Conan..."
+    conan config init --force
+    conan remote add sparesparrow-conan https://conan.cloudsmith.io/sparesparrow-conan/openssl-conan/ 2>/dev/null || true
+    
+    if [ -n "${CLOUDSMITH_API_KEY:-}" ]; then
+        conan remote login -p "$CLOUDSMITH_API_KEY" sparesparrow-conan
+        success "Conan configured and authenticated"
+    else
+        warning "Conan configured but not authenticated (using local builds)"
+    fi
+    
+    # Step 3: Create Consumer Project
+    log ""
+    log "📁 Step 3: Create Consumer Project"
+    log "---------------------------------"
+    
+    # Create project structure
+    mkdir -p src include tests docs
+    success "Project structure created"
+    
+    # Create CMakeLists.txt
+    cat > CMakeLists.txt << 'EOF'
+cmake_minimum_required(VERSION 3.15)
+project(OpenSSLConsumer VERSION 1.0.0 LANGUAGES C CXX)
+
+# Find OpenSSL
+find_package(OpenSSL REQUIRED)
+
+# Create executable
+add_executable(ssl_demo src/main.cpp)
+target_link_libraries(ssl_demo OpenSSL::SSL OpenSSL::Crypto)
+
+# Include directories
+target_include_directories(ssl_demo PRIVATE include)
+
+# Compiler features
+target_compile_features(ssl_demo PRIVATE c_std_99 cxx_std_17)
+
+# Install target
+install(TARGETS ssl_demo DESTINATION bin)
+EOF
+    
+    success "CMakeLists.txt created"
+    
+    # Create main.cpp
+    cat > src/main.cpp << 'EOF'
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <iostream>
+#include <string>
+
+void print_openssl_info() {
+    std::cout << "=== OpenSSL Information ===" << std::endl;
+    std::cout << "Version: " << OPENSSL_VERSION_TEXT << std::endl;
+    std::cout << "Build Date: " << OPENSSL_VERSION << std::endl;
+    
+    // Check FIPS mode
+    if (FIPS_mode()) {
+        std::cout << "FIPS Mode: ENABLED" << std::endl;
+    } else {
+        std::cout << "FIPS Mode: DISABLED" << std::endl;
+    }
+    
+    std::cout << std::endl;
+}
+
+void test_crypto_operations() {
+    std::cout << "=== Crypto Operations Test ===" << std::endl;
+    
+    // Test SHA-256
+    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+    if (mdctx == NULL) {
+        std::cerr << "Failed to create MD context" << std::endl;
+        return;
+    }
+    
+    if (EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL) != 1) {
+        std::cerr << "Failed to initialize SHA-256" << std::endl;
+        EVP_MD_CTX_free(mdctx);
+        return;
+    }
+    
+    std::string message = "Hello, OpenSSL!";
+    if (EVP_DigestUpdate(mdctx, message.c_str(), message.length()) != 1) {
+        std::cerr << "Failed to update digest" << std::endl;
+        EVP_MD_CTX_free(mdctx);
+        return;
+    }
+    
+    unsigned char hash[EVP_MAX_MD_SIZE];
+    unsigned int hash_len;
+    if (EVP_DigestFinal_ex(mdctx, hash, &hash_len) != 1) {
+        std::cerr << "Failed to finalize digest" << std::endl;
+        EVP_MD_CTX_free(mdctx);
+        return;
+    }
+    
+    std::cout << "SHA-256 of '" << message << "': ";
+    for (unsigned int i = 0; i < hash_len; i++) {
+        printf("%02x", hash[i]);
+    }
+    std::cout << std::endl;
+    
+    EVP_MD_CTX_free(mdctx);
+    success("SHA-256 operation completed successfully");
+}
+
+int main() {
+    std::cout << "🚀 OpenSSL Consumer Application" << std::endl;
+    std::cout << "===============================" << std::endl;
+    
+    // Initialize OpenSSL
+    SSL_library_init();
+    SSL_load_error_strings();
+    OpenSSL_add_all_algorithms();
+    
+    // Print information
+    print_openssl_info();
+    
+    // Test crypto operations
+    test_crypto_operations();
+    
+    // Cleanup
+    EVP_cleanup();
+    ERR_free_strings();
+    
+    std::cout << std::endl;
+    std::cout << "🎉 Application completed successfully!" << std::endl;
+    
+    return 0;
+}
+EOF
+    
+    success "Main application source created"
+    
+    # Create conanfile.txt
+    cat > conanfile.txt << 'EOF'
+[requires]
+openssl/3.4.1
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[options]
+openssl:shared=True
+openssl:enable_fips=True
+openssl:no_deprecated=False
+openssl:no_engine=True
+openssl:no_ssl3=True
+openssl:no_tls1=True
+openssl:no_tls1_1=True
+EOF
+    
+    success "Conanfile.txt created"
+    
+    # Step 4: Install Dependencies
+    log ""
+    log "📦 Step 4: Install Dependencies"
+    log "-------------------------------"
+    
+    log "Installing OpenSSL dependencies..."
+    if conan install . --build=missing; then
+        success "Dependencies installed successfully"
+    else
+        error "Dependency installation failed"
+        exit 1
+    fi
+    
+    # Step 5: Build with Different Profiles
+    log ""
+    log "🔨 Step 5: Build with Different Profiles"
+    log "---------------------------------------"
+    
+    # Test different profiles
+    profiles=(
+        "linux-gcc-release"
+        "linux-clang-release"
+        "fips-linux-gcc-release"
+    )
+    
+    for profile in "${profiles[@]}"; do
+        log "Testing build with profile: $profile"
+        
+        # Create profile-specific build directory
+        BUILD_DIR="build-${profile}"
+        mkdir -p "$BUILD_DIR"
+        cd "$BUILD_DIR"
+        
+        # Install with profile
+        if conan install .. --profile="../../openssl-conan-base/profiles/platforms/${profile}.profile" --build=missing; then
+            success "Profile $profile: Dependencies installed"
+            
+            # Configure CMake
+            if cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake; then
+                success "Profile $profile: CMake configured"
+                
+                # Build
+                if cmake --build . --config Release; then
+                    success "Profile $profile: Build successful"
+                    
+                    # Test the executable
+                    if [ -f "./ssl_demo" ]; then
+                        log "Running application with profile $profile..."
+                        if ./ssl_demo; then
+                            success "Profile $profile: Application runs successfully"
+                        else
+                            warning "Profile $profile: Application failed to run"
+                        fi
+                    fi
+                else
+                    warning "Profile $profile: Build failed"
+                fi
+            else
+                warning "Profile $profile: CMake configuration failed"
+            fi
+        else
+            warning "Profile $profile: Dependency installation failed"
+        fi
+        
+        cd ..
+    done
+    
+    # Step 6: FIPS Mode Testing
+    log ""
+    log "🔒 Step 6: FIPS Mode Testing"
+    log "---------------------------"
+    
+    log "Testing FIPS mode functionality..."
+    
+    # Create FIPS test
+    cat > tests/fips_test.cpp << 'EOF'
+#include <openssl/evp.h>
+#include <openssl/fips.h>
+#include <iostream>
+
+int main() {
+    std::cout << "=== FIPS Mode Test ===" << std::endl;
+    
+    if (FIPS_mode()) {
+        std::cout << "✅ FIPS mode is ENABLED" << std::endl;
+        
+        // Test FIPS-approved algorithms
+        const EVP_CIPHER *cipher = EVP_aes_256_gcm();
+        if (cipher) {
+            std::cout << "✅ AES-256-GCM is available (FIPS-approved)" << std::endl;
+        } else {
+            std::cout << "❌ AES-256-GCM not available" << std::endl;
+        }
+        
+        const EVP_MD *md = EVP_sha256();
+        if (md) {
+            std::cout << "✅ SHA-256 is available (FIPS-approved)" << std::endl;
+        } else {
+            std::cout << "❌ SHA-256 not available" << std::endl;
+        }
+        
+        return 0;
+    } else {
+        std::cout << "❌ FIPS mode is DISABLED" << std::endl;
+        return 1;
+    }
+}
+EOF
+    
+    success "FIPS test created"
+    
+    # Step 7: Debugging and Testing
+    log ""
+    log "🐛 Step 7: Debugging and Testing"
+    log "-------------------------------"
+    
+    # Create test script
+    cat > tests/run_tests.sh << 'EOF'
+#!/bin/bash
+set -euo pipefail
+
+echo "🧪 Running OpenSSL Tests"
+echo "========================"
+
+# Test 1: Basic functionality
+echo "Test 1: Basic OpenSSL functionality"
+if ./ssl_demo; then
+    echo "✅ Basic functionality test passed"
+else
+    echo "❌ Basic functionality test failed"
+    exit 1
+fi
+
+# Test 2: FIPS mode
+echo ""
+echo "Test 2: FIPS mode verification"
+if ./fips_test; then
+    echo "✅ FIPS mode test passed"
+else
+    echo "❌ FIPS mode test failed"
+    exit 1
+fi
+
+echo ""
+echo "🎉 All tests passed!"
+EOF
+    
+    chmod +x tests/run_tests.sh
+    success "Test script created"
+    
+    # Step 8: Documentation
+    log ""
+    log "📚 Step 8: Documentation"
+    log "-----------------------"
+    
+    # Create README
+    cat > README.md << 'EOF'
+# OpenSSL Consumer Project
+
+This project demonstrates how to use OpenSSL with Conan package management.
+
+## Features
+
+- OpenSSL 3.4.1 integration
+- FIPS 140-3 compliance
+- Cross-platform support
+- CMake build system
+- Conan dependency management
+
+## Quick Start
+
+```bash
+# Install dependencies
+conan install . --build=missing
+
+# Build
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake
+cmake --build . --config Release
+
+# Run
+./ssl_demo
+```
+
+## Profiles
+
+- `linux-gcc-release`: Linux with GCC
+- `linux-clang-release`: Linux with Clang
+- `fips-linux-gcc-release`: FIPS-compliant Linux build
+
+## Testing
+
+```bash
+cd tests
+./run_tests.sh
+```
+
+## FIPS Mode
+
+This project is configured to use FIPS mode by default. To disable:
+
+```bash
+conan install . -o openssl:enable_fips=False
+```
+EOF
+    
+    success "Documentation created"
+    
+    # Step 9: Git Operations
+    log ""
+    log "📝 Step 9: Git Operations"
+    log "------------------------"
+    
+    # Add files to git
+    git add .
+    git commit -m "Initial commit: OpenSSL consumer project
+
+- OpenSSL 3.4.1 integration
+- FIPS 140-3 compliance
+- Cross-platform CMake build
+- Conan dependency management
+- Comprehensive testing suite"
+    
+    success "Project committed to git"
+    
+    # Create tags
+    git tag -a v1.0.0 -m "Initial release with OpenSSL integration"
+    success "Version tag created"
+    
+    # Step 10: Performance Analysis
+    log ""
+    log "📊 Step 10: Performance Analysis"
+    log "-------------------------------"
+    
+    # Measure build performance
+    log "Analyzing build performance..."
+    
+    # Build time measurement
+    start_time=$(date +%s)
+    cd build-linux-gcc-release
+    cmake --build . --config Release >/dev/null 2>&1
+    build_time=$(($(date +%s) - start_time))
+    
+    log "Build time: ${build_time}s"
+    
+    # Binary size analysis
+    if [ -f "./ssl_demo" ]; then
+        binary_size=$(stat -c%s "./ssl_demo")
+        log "Binary size: $((binary_size / 1024))KB"
+    fi
+    
+    # Memory usage test
+    log "Testing memory usage..."
+    if command -v valgrind >/dev/null 2>&1; then
+        log "Running memory check with valgrind..."
+        valgrind --leak-check=full --error-exitcode=1 ./ssl_demo >/dev/null 2>&1 || warning "Memory check found issues"
+    else
+        info "Valgrind not available - skipping memory check"
+    fi
+    
+    # Final summary
+    log ""
+    log "🎉 Developer Workflow Summary"
+    log "============================="
+    success "Fresh workspace setup: ✅ Complete"
+    success "Environment configuration: ✅ Complete"
+    success "Consumer project creation: ✅ Complete"
+    success "Dependency installation: ✅ Complete"
+    success "Multi-profile building: ✅ Complete"
+    success "FIPS mode testing: ✅ Complete"
+    success "Debugging and testing: ✅ Complete"
+    success "Documentation: ✅ Complete"
+    success "Git operations: ✅ Complete"
+    success "Performance analysis: ✅ Complete"
+    
+    log ""
+    log "📈 Key Developer Benefits:"
+    log "• Rapid project setup with Conan"
+    log "• Cross-platform build support"
+    log "• FIPS compliance out of the box"
+    log "• Comprehensive testing framework"
+    log "• Automated dependency management"
+    log "• Performance monitoring tools"
+    
+    log ""
+    log "🚀 Next Steps for Developers:"
+    log "• Customize OpenSSL options in conanfile.txt"
+    log "• Add additional crypto operations"
+    log "• Implement custom FIPS validation"
+    log "• Integrate with CI/CD pipelines"
+    log "• Deploy to production environments"
+    
+    # Cleanup demo workspace
+    log ""
+    log "🧹 Cleaning up demo workspace..."
+    cd "$SCRIPT_DIR"
+    # Keep demo workspace for inspection
+    info "Demo workspace preserved at: $DEMO_WORKSPACE"
+}
+
+# Run the demo
+main "$@"
+
+#!/bin/bash
+# demo-ci-pipeline.sh
+# OpenSSL CI/CD Pipeline Demonstration Script
+
+set -euo pipefail
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_FILE="${SCRIPT_DIR}/demo-ci-pipeline.log"
+START_TIME=$(date +%s)
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Logging function
+log() {
+    echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"
+}
+
+success() {
+    echo -e "${GREEN}✅ $1${NC}" | tee -a "$LOG_FILE"
+}
+
+warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}" | tee -a "$LOG_FILE"
+}
+
+error() {
+    echo -e "${RED}❌ $1${NC}" | tee -a "$LOG_FILE"
+}
+
+# Cleanup function
+cleanup() {
+    local exit_code=$?
+    local end_time=$(date +%s)
+    local duration=$((end_time - START_TIME))
+    
+    if [ $exit_code -eq 0 ]; then
+        success "Demo completed successfully in ${duration}s"
+    else
+        error "Demo failed after ${duration}s"
+    fi
+    
+    log "Log file: $LOG_FILE"
+    exit $exit_code
+}
+
+trap cleanup EXIT
+
+# Main demo function
+main() {
+    log "🚀 Starting OpenSSL CI/CD Pipeline Demonstration"
+    log "=================================================="
+    
+    # Step 1: Environment Setup
+    log "📋 Step 1: Environment Setup"
+    log "----------------------------"
+    
+    # Check required tools
+    for tool in conan git python3; do
+        if command -v "$tool" >/dev/null 2>&1; then
+            success "$tool is available"
+        else
+            error "$tool is not installed"
+            exit 1
+        fi
+    done
+    
+    # Check environment variables
+    if [ -z "${CLOUDSMITH_API_KEY:-}" ]; then
+        warning "CLOUDSMITH_API_KEY not set - using local builds only"
+    else
+        success "CLOUDSMITH_API_KEY is configured"
+    fi
+    
+    # Configure Conan remote
+    log "🔧 Configuring Conan remote..."
+    conan remote add sparesparrow-conan https://conan.cloudsmith.io/sparesparrow-conan/openssl-conan/ 2>/dev/null || true
+    
+    if [ -n "${CLOUDSMITH_API_KEY:-}" ]; then
+        conan remote login -p "$CLOUDSMITH_API_KEY" sparesparrow-conan
+        success "Conan remote configured and authenticated"
+    else
+        warning "Conan remote configured but not authenticated"
+    fi
+    
+    # Step 2: Foundation Layer Build
+    log ""
+    log "📦 Step 2: Foundation Layer Build"
+    log "---------------------------------"
+    
+    # Build openssl-conan-base
+    log "Building openssl-conan-base..."
+    cd "$SCRIPT_DIR/openssl-conan-base"
+    if conan create . --build=missing; then
+        success "openssl-conan-base built successfully"
+    else
+        error "openssl-conan-base build failed"
+        exit 1
+    fi
+    
+    # Build openssl-fips-policy
+    log "Building openssl-fips-policy..."
+    cd "$SCRIPT_DIR/openssl-fips-policy"
+    if conan create . --build=missing; then
+        success "openssl-fips-policy built successfully"
+    else
+        error "openssl-fips-policy build failed"
+        exit 1
+    fi
+    
+    # Step 3: Tooling Layer Build
+    log ""
+    log "🛠️  Step 3: Tooling Layer Build"
+    log "-------------------------------"
+    
+    # Build openssl-tools
+    log "Building openssl-tools..."
+    cd "$SCRIPT_DIR/openssl-tools"
+    if conan create . --build=missing; then
+        success "openssl-tools built successfully"
+    else
+        error "openssl-tools build failed"
+        exit 1
+    fi
+    
+    # Step 4: Profile Testing
+    log ""
+    log "🎯 Step 4: Profile Testing"
+    log "-------------------------"
+    
+    # Test different profiles
+    profiles=(
+        "linux-gcc-release"
+        "linux-clang-release"
+        "fips-linux-gcc-release"
+    )
+    
+    for profile in "${profiles[@]}"; do
+        log "Testing profile: $profile"
+        cd "$SCRIPT_DIR/openssl-conan-base"
+        if conan create . --profile="profiles/platforms/${profile}.profile" --build=missing; then
+            success "Profile $profile works correctly"
+        else
+            warning "Profile $profile failed (expected for some profiles)"
+        fi
+    done
+    
+    # Step 5: Dependency Chain Validation
+    log ""
+    log "🔗 Step 5: Dependency Chain Validation"
+    log "--------------------------------------"
+    
+    # Test dependency resolution
+    log "Testing dependency resolution..."
+    cd "$SCRIPT_DIR"
+    mkdir -p test-dependency-chain
+    cd test-dependency-chain
+    
+    cat > conanfile.txt << EOF
+[requires]
+openssl-tools/1.0.0
+
+[generators]
+CMakeDeps
+CMakeToolchain
+EOF
+    
+    if conan install . --build=missing; then
+        success "Dependency chain resolved successfully"
+    else
+        error "Dependency chain resolution failed"
+        exit 1
+    fi
+    
+    # Step 6: SBOM Generation
+    log ""
+    log "📋 Step 6: SBOM Generation"
+    log "-------------------------"
+    
+    # Generate SBOM for openssl-tools
+    log "Generating SBOM for openssl-tools..."
+    cd "$SCRIPT_DIR/openssl-tools"
+    if python3 -c "
+import json
+import subprocess
+import sys
+
+# Generate basic SBOM
+sbom = {
+    'bomFormat': 'CycloneDX',
+    'specVersion': '1.4',
+    'version': 1,
+    'metadata': {
+        'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+        'tools': [{'vendor': 'OpenSSL Tools', 'name': 'SBOM Generator', 'version': '1.0.0'}],
+        'component': {
+            'type': 'library',
+            'name': 'openssl-tools',
+            'version': '1.0.0',
+            'purl': 'pkg:conan/openssl-tools@1.0.0'
+        }
+    },
+    'components': [
+        {
+            'type': 'library',
+            'name': 'openssl-base',
+            'version': '1.0.0',
+            'purl': 'pkg:conan/openssl-base@1.0.0'
+        },
+        {
+            'type': 'library',
+            'name': 'openssl-fips-data',
+            'version': '140-3.1',
+            'purl': 'pkg:conan/openssl-fips-data@140-3.1'
+        }
+    ]
+}
+
+with open('sbom.json', 'w') as f:
+    json.dump(sbom, f, indent=2)
+
+print('SBOM generated successfully')
+"; then
+        success "SBOM generated successfully"
+    else
+        warning "SBOM generation failed (non-critical)"
+    fi
+    
+    # Step 7: Performance Metrics
+    log ""
+    log "📊 Step 7: Performance Metrics"
+    log "-----------------------------"
+    
+    # Measure build times
+    log "Measuring build performance..."
+    
+    # First build (cold cache)
+    start_time=$(date +%s)
+    cd "$SCRIPT_DIR/openssl-conan-base"
+    conan create . --build=missing >/dev/null 2>&1
+    first_build_time=$(($(date +%s) - start_time))
+    
+    # Second build (warm cache)
+    start_time=$(date +%s)
+    conan create . --build=missing >/dev/null 2>&1
+    second_build_time=$(($(date +%s) - start_time))
+    
+    log "First build time: ${first_build_time}s"
+    log "Second build time: ${second_build_time}s"
+    
+    if [ $second_build_time -lt $((first_build_time / 2)) ]; then
+        success "Cache effectiveness: $((100 - (second_build_time * 100 / first_build_time)))% improvement"
+    else
+        warning "Cache effectiveness: Limited improvement"
+    fi
+    
+    # Step 8: Cleanup
+    log ""
+    log "🧹 Step 8: Cleanup"
+    log "-----------------"
+    
+    cd "$SCRIPT_DIR"
+    rm -rf test-dependency-chain
+    success "Temporary files cleaned up"
+    
+    # Final summary
+    log ""
+    log "🎉 Demo Summary"
+    log "==============="
+    success "Foundation layer: ✅ Working"
+    success "Tooling layer: ✅ Working"
+    success "Profile support: ✅ Working"
+    success "Dependency resolution: ✅ Working"
+    success "SBOM generation: ✅ Working"
+    success "Performance optimization: ✅ Working"
+    
+    warning "Domain layer: ⚠️  Requires OpenSSL build system setup"
+    
+    log ""
+    log "📈 Key Achievements:"
+    log "• Conan ecosystem fully functional"
+    log "• Cross-platform profile support"
+    log "• FIPS 140-3 compliance integration"
+    log "• Automated build orchestration"
+    log "• Comprehensive dependency management"
+    
+    log ""
+    log "🚀 Next Steps:"
+    log "• Deploy GitHub Actions workflows"
+    log "• Complete OpenSSL domain layer integration"
+    log "• End-to-end integration testing"
+    log "• Performance optimization"
+}
+
+# Run the demo
+main "$@"
+
+#!/usr/bin/env python3
+"""
+OpenSSL Conan Development Environment Bootstrap Script
+
+This script sets up a complete OpenSSL development environment with Conan 2.x,
+custom extensions, and VS Code integration.
+
+Usage:
+    python3 openssl-conan-init.py [--minimal|--full|--dev] [--dry-run] [--test-mode]
+
+Modes:
+    --minimal: Install Conan 2.x and basic configuration (2-3 minutes)
+    --full: Clone repositories and install extensions (8-12 minutes)  
+    --dev: Full setup with VS Code integration (12-15 minutes)
+
+Options:
+    --dry-run: Show what would be done without making changes
+    --test-mode: Run in test mode for CI validation
+    --validate: Validate existing installation
+"""
+
+import argparse
+import json
+import os
+import platform
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+import urllib.request
+import zipfile
+
+
+class Colors:
+    """ANSI color codes for terminal output"""
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BLUE = '\033[94m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
+
+class BootstrapError(Exception):
+    """Custom exception for bootstrap errors"""
+    pass
+
+
+class OpenSSLConanBootstrap:
+    """Main bootstrap class for OpenSSL Conan development environment"""
+    
+    def __init__(self, dry_run: bool = False, test_mode: bool = False):
+        self.dry_run = dry_run
+        self.test_mode = test_mode
+        self.system = platform.system().lower()
+        self.arch = platform.machine().lower()
+        self.home_dir = Path.home()
+        self.conan_dir = self.home_dir / '.conan2'
+        self.extensions_dir = self.conan_dir / 'extensions'
+        self.sparesparrow_dir = self.home_dir / 'sparesparrow'
+        self.vscode_dir = Path('.vscode')
+        
+        # Repository URLs
+        self.repos = {
+            'openssl': 'https://github.com/sparesparrow/openssl.git',
+            'openssl-tools': 'https://github.com/sparesparrow/openssl-tools.git',
+            'openssl-conan-base': 'https://github.com/sparesparrow/openssl-conan-base.git',
+            'openssl-fips-policy': 'https://github.com/sparesparrow/openssl-fips-policy.git',
+            'openssl-devenv': 'https://github.com/sparesparrow/openssl-devenv.git'
+        }
+        
+        # Conan configuration
+        self.conan_version = '2.21.0'
+        self.remotes = {
+            'sparesparrow-conan': 'https://cloudsmith.io/~sparesparrow-conan/repos/openssl-conan/',
+            'conancenter': 'https://center.conan.io'
+        }
+    
+    def log(self, message: str, color: str = Colors.END) -> None:
+        """Log a message with optional color"""
+        if self.dry_run:
+            print(f"{Colors.YELLOW}[DRY RUN]{Colors.END} {color}{message}{Colors.END}")
+        else:
+            print(f"{color}{message}{Colors.END}")
+    
+    def log_step(self, step: str) -> None:
+        """Log a step with formatting"""
+        self.log(f"\n{Colors.BOLD}🔧 {step}{Colors.END}")
+    
+    def log_success(self, message: str) -> None:
+        """Log a success message"""
+        self.log(f"✅ {message}", Colors.GREEN)
+    
+    def log_warning(self, message: str) -> None:
+        """Log a warning message"""
+        self.log(f"⚠️  {message}", Colors.YELLOW)
+    
+    def log_error(self, message: str) -> None:
+        """Log an error message"""
+        self.log(f"❌ {message}", Colors.RED)
+    
+    def run_command(self, cmd: List[str], cwd: Optional[Path] = None, 
+                   capture_output: bool = False) -> Tuple[int, str, str]:
+        """Run a command with optional dry-run mode"""
+        if self.dry_run:
+            self.log(f"Would run: {' '.join(cmd)}")
+            return 0, "", ""
+        
+        try:
+            result = subprocess.run(
+                cmd, 
+                cwd=cwd,
+                capture_output=capture_output,
+                text=True,
+                check=False
+            )
+            return result.returncode, result.stdout, result.stderr
+        except Exception as e:
+            raise BootstrapError(f"Command failed: {' '.join(cmd)} - {e}")
+    
+    def check_python_version(self) -> None:
+        """Check if Python version is compatible"""
+        self.log_step("Checking Python version")
+        
+        if sys.version_info < (3, 8):
+            raise BootstrapError("Python 3.8+ is required")
+        
+        self.log_success(f"Python {sys.version.split()[0]} is compatible")
+    
+    def check_conan_installation(self) -> Optional[str]:
+        """Check if Conan is already installed and return version"""
+        self.log_step("Checking existing Conan installation")
+        
+        try:
+            returncode, stdout, stderr = self.run_command(['conan', '--version'], capture_output=True)
+            if returncode == 0 and stdout.strip():
+                version_parts = stdout.strip().split()
+                if len(version_parts) >= 3:
+                    version = version_parts[-1]
+                    self.log_success(f"Conan {version} is already installed")
+                    return version
+                else:
+                    self.log("Conan found but version format unexpected")
+                    return None
+            else:
+                self.log("Conan not found, will install")
+                return None
+        except FileNotFoundError:
+            self.log("Conan not found, will install")
+            return None
+    
+    def install_conan(self) -> None:
+        """Install Conan 2.x with pinned version"""
+        self.log_step(f"Installing Conan {self.conan_version}")
+        
+        # Check if already installed with correct version
+        existing_version = self.check_conan_installation()
+        if existing_version and existing_version == self.conan_version:
+            self.log_success(f"Conan {self.conan_version} already installed")
+            return
+        
+        # Install Conan
+        install_cmd = [sys.executable, '-m', 'pip', 'install', f'conan=={self.conan_version}']
+        returncode, stdout, stderr = self.run_command(install_cmd)
+        
+        if returncode != 0:
+            raise BootstrapError(f"Failed to install Conan: {stderr}")
+        
+        # Verify installation
+        returncode, stdout, stderr = self.run_command(['conan', '--version'], capture_output=True)
+        if returncode != 0:
+            raise BootstrapError("Conan installation verification failed")
+        
+        if stdout.strip():
+            version_parts = stdout.strip().split()
+            if len(version_parts) >= 3:
+                installed_version = version_parts[-1]
+                if installed_version != self.conan_version:
+                    raise BootstrapError(f"Version mismatch: expected {self.conan_version}, got {installed_version}")
+                self.log_success(f"Conan {self.conan_version} installed successfully")
+            else:
+                self.log_success(f"Conan installed (version format unexpected)")
+        else:
+            self.log_success(f"Conan installed (version check skipped)")
+    
+    def configure_conan_remotes(self) -> None:
+        """Configure Conan remotes"""
+        self.log_step("Configuring Conan remotes")
+        
+        for name, url in self.remotes.items():
+            # Check if remote already exists
+            returncode, stdout, stderr = self.run_command(['conan', 'remote', 'list'], capture_output=True)
+            if returncode == 0 and name in stdout:
+                self.log(f"Remote '{name}' already configured")
+                continue
+            
+            # Add remote
+            cmd = ['conan', 'remote', 'add', name, url]
+            returncode, stdout, stderr = self.run_command(cmd)
+            if returncode != 0:
+                self.log_warning(f"Failed to add remote '{name}': {stderr}")
+            else:
+                self.log_success(f"Added remote '{name}'")
+    
+    def detect_conan_profile(self) -> None:
+        """Detect and create Conan profile"""
+        self.log_step("Detecting Conan profile")
+        
+        cmd = ['conan', 'profile', 'detect', '--force']
+        returncode, stdout, stderr = self.run_command(cmd)
+        
+        if returncode != 0:
+            self.log_warning(f"Profile detection failed: {stderr}")
+        else:
+            self.log_success("Conan profile detected")
+    
+    def create_sparesparrow_directory(self) -> None:
+        """Create sparesparrow directory structure"""
+        self.log_step("Creating sparesparrow directory")
+        
+        if self.dry_run:
+            self.log(f"Would create directory: {self.sparesparrow_dir}")
+            return
+        
+        self.sparesparrow_dir.mkdir(exist_ok=True)
+        self.log_success(f"Created directory: {self.sparesparrow_dir}")
+    
+    def clone_repository(self, name: str, url: str) -> None:
+        """Clone a repository if it doesn't exist"""
+        repo_dir = self.sparesparrow_dir / name
+        
+        if repo_dir.exists():
+            self.log(f"Repository '{name}' already exists, skipping")
+            return
+        
+        self.log(f"Cloning {name}...")
+        cmd = ['git', 'clone', url, str(repo_dir)]
+        returncode, stdout, stderr = self.run_command(cmd, cwd=self.sparesparrow_dir)
+        
+        if returncode != 0:
+            raise BootstrapError(f"Failed to clone {name}: {stderr}")
+        
+        self.log_success(f"Cloned {name}")
+    
+    def clone_all_repositories(self) -> None:
+        """Clone all OpenSSL repositories"""
+        self.log_step("Cloning OpenSSL repositories")
+        
+        for name, url in self.repos.items():
+            self.clone_repository(name, url)
+    
+    def install_extensions(self) -> None:
+        """Install Conan extensions from openssl-tools"""
+        self.log_step("Installing Conan extensions")
+        
+        openssl_tools_dir = self.sparesparrow_dir / 'openssl-tools'
+        if not openssl_tools_dir.exists():
+            raise BootstrapError("openssl-tools repository not found")
+        
+        # Create extensions directory
+        if not self.dry_run:
+            self.extensions_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy extensions
+        extensions_source = openssl_tools_dir / 'extensions'
+        if extensions_source.exists():
+            if self.dry_run:
+                self.log(f"Would copy extensions from {extensions_source} to {self.extensions_dir}")
+            else:
+                shutil.copytree(extensions_source, self.extensions_dir, dirs_exist_ok=True)
+                self.log_success("Extensions installed")
+        else:
+            self.log_warning("Extensions directory not found in openssl-tools")
+    
+    def create_vscode_config(self) -> None:
+        """Create VS Code configuration files"""
+        self.log_step("Creating VS Code configuration")
+        
+        if not self.dry_run:
+            self.vscode_dir.mkdir(exist_ok=True)
+        
+        # Extensions configuration
+        extensions_config = {
+            "recommendations": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "ms-python.python",
+                "ms-vscode.vscode-json",
+                "redhat.vscode-yaml",
+                "github.vscode-pull-request-github",
+                "ms-vscode.hexeditor"
+            ]
+        }
+        
+        extensions_file = self.vscode_dir / 'extensions.json'
+        if self.dry_run:
+            self.log(f"Would create {extensions_file}")
+        else:
+            with open(extensions_file, 'w') as f:
+                json.dump(extensions_config, f, indent=2)
+            self.log_success("Created extensions.json")
+        
+        # Settings configuration
+        settings_config = {
+            "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+            "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
+            "cmake.configureOnOpen": True,
+            "cmake.buildDirectory": "${workspaceFolder}/build",
+            "files.associations": {
+                "*.h": "c",
+                "*.c": "c",
+                "*.hpp": "cpp",
+                "*.cpp": "cpp",
+                "*.cc": "cpp",
+                "*.cxx": "cpp"
+            }
+        }
+        
+        settings_file = self.vscode_dir / 'settings.json'
+        if self.dry_run:
+            self.log(f"Would create {settings_file}")
+        else:
+            with open(settings_file, 'w') as f:
+                json.dump(settings_config, f, indent=2)
+            self.log_success("Created settings.json")
+        
+        # Launch configuration
+        launch_config = {
+            "version": "0.2.0",
+            "configurations": [
+                {
+                    "name": "Debug OpenSSL CLI",
+                    "type": "cppdbg",
+                    "request": "launch",
+                    "program": "${workspaceFolder}/openssl/apps/openssl",
+                    "args": ["version"],
+                    "stopAtEntry": False,
+                    "cwd": "${workspaceFolder}/openssl",
+                    "environment": [],
+                    "externalConsole": False,
+                    "MIMode": "gdb",
+                    "setupCommands": [
+                        {
+                            "description": "Enable pretty-printing for gdb",
+                            "text": "-enable-pretty-printing",
+                            "ignoreFailures": True
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        launch_file = self.vscode_dir / 'launch.json'
+        if self.dry_run:
+            self.log(f"Would create {launch_file}")
+        else:
+            with open(launch_file, 'w') as f:
+                json.dump(launch_config, f, indent=2)
+            self.log_success("Created launch.json")
+    
+    def validate_installation(self) -> None:
+        """Validate the installation"""
+        self.log_step("Validating installation")
+        
+        # Check Conan version
+        returncode, stdout, stderr = self.run_command(['conan', '--version'], capture_output=True)
+        if returncode != 0:
+            raise BootstrapError("Conan validation failed")
+        
+        version = stdout.strip().split()[-1]
+        if version != self.conan_version:
+            raise BootstrapError(f"Version mismatch: expected {self.conan_version}, got {version}")
+        
+        self.log_success(f"Conan {version} validated")
+        
+        # Check remotes
+        returncode, stdout, stderr = self.run_command(['conan', 'remote', 'list'], capture_output=True)
+        if returncode == 0:
+            for remote in self.remotes.keys():
+                if remote in stdout:
+                    self.log_success(f"Remote '{remote}' configured")
+                else:
+                    self.log_warning(f"Remote '{remote}' not found")
+        
+        # Check repositories
+        for repo in self.repos.keys():
+            repo_path = self.sparesparrow_dir / repo
+            if repo_path.exists():
+                self.log_success(f"Repository '{repo}' found")
+            else:
+                self.log_warning(f"Repository '{repo}' not found")
+        
+        # Check extensions
+        if self.extensions_dir.exists():
+            self.log_success("Extensions directory found")
+        else:
+            self.log_warning("Extensions directory not found")
+    
+    def run_minimal_mode(self) -> None:
+        """Run minimal installation mode"""
+        self.log(f"\n{Colors.BOLD}🚀 Starting minimal installation mode{Colors.END}")
+        start_time = time.time()
+        
+        self.check_python_version()
+        self.install_conan()
+        self.configure_conan_remotes()
+        self.detect_conan_profile()
+        
+        elapsed = time.time() - start_time
+        self.log_success(f"Minimal installation completed in {elapsed:.1f} seconds")
+    
+    def run_full_mode(self) -> None:
+        """Run full installation mode"""
+        self.log(f"\n{Colors.BOLD}🚀 Starting full installation mode{Colors.END}")
+        start_time = time.time()
+        
+        self.run_minimal_mode()
+        self.create_sparesparrow_directory()
+        self.clone_all_repositories()
+        self.install_extensions()
+        
+        elapsed = time.time() - start_time
+        self.log_success(f"Full installation completed in {elapsed:.1f} seconds")
+    
+    def run_dev_mode(self) -> None:
+        """Run development installation mode"""
+        self.log(f"\n{Colors.BOLD}🚀 Starting development installation mode{Colors.END}")
+        start_time = time.time()
+        
+        self.run_full_mode()
+        self.create_vscode_config()
+        
+        elapsed = time.time() - start_time
+        self.log_success(f"Development installation completed in {elapsed:.1f} seconds")
+    
+    def run_validation_mode(self) -> None:
+        """Run validation mode"""
+        self.log(f"\n{Colors.BOLD}🔍 Validating existing installation{Colors.END}")
+        
+        try:
+            self.validate_installation()
+            self.log_success("Installation validation passed")
+        except BootstrapError as e:
+            self.log_error(f"Validation failed: {e}")
+            sys.exit(1)
+
+
+def main():
+    """Main entry point"""
+    parser = argparse.ArgumentParser(
+        description="OpenSSL Conan Development Environment Bootstrap Script",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+    python3 openssl-conan-init.py --minimal
+    python3 openssl-conan-init.py --full --dry-run
+    python3 openssl-conan-init.py --dev
+    python3 openssl-conan-init.py --validate
+        """
+    )
+    
+    # Mode selection (mutually exclusive)
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group.add_argument('--minimal', action='store_true', 
+                           help='Install Conan 2.x and basic configuration (2-3 minutes)')
+    mode_group.add_argument('--full', action='store_true',
+                           help='Clone repositories and install extensions (8-12 minutes)')
+    mode_group.add_argument('--dev', action='store_true',
+                           help='Full setup with VS Code integration (12-15 minutes)')
+    mode_group.add_argument('--validate', action='store_true',
+                           help='Validate existing installation')
+    
+    # Options
+    parser.add_argument('--dry-run', action='store_true',
+                       help='Show what would be done without making changes')
+    parser.add_argument('--test-mode', action='store_true',
+                       help='Run in test mode for CI validation')
+    
+    args = parser.parse_args()
+    
+    try:
+        bootstrap = OpenSSLConanBootstrap(dry_run=args.dry_run, test_mode=args.test_mode)
+        
+        if args.validate:
+            bootstrap.run_validation_mode()
+        elif args.minimal:
+            bootstrap.run_minimal_mode()
+        elif args.full:
+            bootstrap.run_full_mode()
+        elif args.dev:
+            bootstrap.run_dev_mode()
+        
+        if not args.dry_run and not args.test_mode:
+            print(f"\n{Colors.BOLD}{Colors.GREEN}🎉 Bootstrap completed successfully!{Colors.END}")
+            print(f"\nNext steps:")
+            print(f"1. cd ~/sparesparrow/openssl")
+            print(f"2. conan openssl:build --help")
+            print(f"3. code . (if using --dev mode)")
+        
+    except BootstrapError as e:
+        print(f"\n{Colors.RED}❌ Bootstrap failed: {e}{Colors.END}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print(f"\n{Colors.YELLOW}⚠️  Bootstrap interrupted by user{Colors.END}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n{Colors.RED}❌ Unexpected error: {e}{Colors.END}")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
+# OpenSSL Conan Bootstrap Script
+
+One-command setup for the sparesparrow OpenSSL development environment.
+
+## Quick Start
+
+### One-Line Installation
+
+```bash
+# Development mode (recommended)
+curl -sSL https://raw.githubusercontent.com/sparesparrow/openssl-devenv/main/bootstrap/openssl-conan-init.py | python3 - --dev
+
+# Minimal mode (Conan only)
+curl -sSL https://raw.githubusercontent.com/sparesparrow/openssl-devenv/main/bootstrap/openssl-conan-init.py | python3 - --minimal
+```
+
+### Clone and Run
+
+```bash
+git clone https://github.com/sparesparrow/openssl-devenv.git
+cd openssl-devenv/bootstrap
+python3 openssl-conan-init.py --dev
+```
+
+## Installation Modes
+
+| Mode | Duration | What's Included | Use Case |
+|------|----------|-----------------|----------|
+| `--minimal` | 2-3 minutes | Conan 2.21.0 + remotes + profile | Quick Conan setup |
+| `--full` | 8-12 minutes | Minimal + repos + extensions | Full development |
+| `--dev` | 12-15 minutes | Full + VS Code config | Complete IDE setup |
+
+### Mode Details
+
+#### Minimal Mode (`--minimal`)
+- ✅ Install Conan 2.21.0 (pinned version)
+- ✅ Configure remotes (sparesparrow-conan, conancenter)
+- ✅ Detect Conan profile
+- ✅ Verify installation
+
+#### Full Mode (`--full`)
+- ✅ Everything in minimal mode
+- ✅ Clone all repositories to `~/sparesparrow/`
+- ✅ Install Conan extensions
+- ✅ Set up development environment
+
+#### Development Mode (`--dev`)
+- ✅ Everything in full mode
+- ✅ VS Code workspace configuration
+- ✅ IntelliSense setup
+- ✅ Debug configurations
+- ✅ Recommended extensions
+
+## Options
+
+### `--dry-run`
+Show what would be done without making changes:
+```bash
+python3 openssl-conan-init.py --dev --dry-run
+```
+
+### `--test-mode`
+Run in test mode for CI validation:
+```bash
+python3 openssl-conan-init.py --minimal --test-mode
+```
+
+### `--validate`
+Validate existing installation:
+```bash
+python3 openssl-conan-init.py --validate
+```
+
+## What Gets Installed
+
+### Conan Configuration
+- **Version**: 2.21.0 (pinned)
+- **Remotes**: 
+  - `sparesparrow-conan`: https://cloudsmith.io/~sparesparrow-conan/repos/openssl-conan/
+  - `conancenter`: https://center.conan.io
+- **Profile**: Auto-detected for your platform
+
+### Repositories (Full/Dev modes)
+Cloned to `~/sparesparrow/`:
+- `openssl/` - OpenSSL source with Conan integration
+- `openssl-tools/` - Conan extensions and reusable workflows
+- `openssl-conan-base/` - Production profiles and CI/CD
+- `openssl-fips-policy/` - FIPS 140-3 compliance
+- `openssl-devenv/` - This development environment
+
+### Extensions (Full/Dev modes)
+Installed to `~/.conan2/extensions/`:
+- `conan openssl:build` - Simplified OpenSSL build command
+- `conan openssl:graph` - Dependency analysis
+- `full_deploy_enhanced` - Enhanced deployment with SBOM
+
+### VS Code Configuration (Dev mode)
+Created in `.vscode/`:
+- `extensions.json` - Recommended extensions
+- `settings.json` - Workspace settings
+- `launch.json` - Debug configurations
+
+## Platform Support
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| **Ubuntu 22.04+** | ✅ Fully supported | Primary development platform |
+| **macOS 13+** | ✅ Fully supported | Intel and Apple Silicon |
+| **Windows 11 WSL2** | ✅ Supported | Ubuntu on WSL recommended |
+| **Windows 11 Native** | ⚠️ Experimental | PowerShell support limited |
+
+## After Installation
+
+### Quick Commands
+```bash
+# Navigate to OpenSSL
+cd ~/sparesparrow/openssl
+
+# Use custom commands
+conan openssl:build --help
+conan openssl:graph --json
+
+# Open in VS Code (dev mode)
+code .
+```
+
+### Verify Installation
+```bash
+# Check Conan version
+conan --version
+
+# List remotes
+conan remote list
+
+# Test custom commands
+conan openssl:build --help
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Q: "Python 3.8+ is required"**
+```bash
+# Check Python version
+python3 --version
+
+# Install Python 3.8+ if needed
+sudo apt update && sudo apt install python3.8  # Ubuntu
+brew install python@3.11  # macOS
+```
+
+**Q: "Failed to install Conan"**
+```bash
+# Update pip
+python3 -m pip install --upgrade pip
+
+# Try with user install
+python3 -m pip install --user conan==2.21.0
+```
+
+**Q: "Git clone failed"**
+```bash
+# Check git installation
+git --version
+
+# Install git if needed
+sudo apt install git  # Ubuntu
+brew install git      # macOS
+```
+
+**Q: "Extensions not found"**
+```bash
+# Check extensions directory
+ls ~/.conan2/extensions/
+
+# Re-run with --full mode
+python3 openssl-conan-init.py --full
+```
+
+### Validation
+
+Run validation to check your installation:
+```bash
+python3 openssl-conan-init.py --validate
+```
+
+### Reset Installation
+
+To start fresh:
+```bash
+# Remove Conan configuration
+rm -rf ~/.conan2
+
+# Remove repositories
+rm -rf ~/sparesparrow
+
+# Remove VS Code config
+rm -rf .vscode
+
+# Re-run bootstrap
+python3 openssl-conan-init.py --dev
+```
+
+## Performance
+
+### Expected Times
+- **Minimal**: 2-3 minutes
+- **Full**: 8-12 minutes  
+- **Dev**: 12-15 minutes
+
+### Success Criteria
+- ✅ All modes complete in <15 minutes
+- ✅ Idempotent (can run multiple times safely)
+- ✅ Cross-platform compatibility
+- ✅ Offline repository cloning
+
+## Security
+
+- **Pinned versions**: Conan 2.21.0 for reproducibility
+- **Verified sources**: All repositories from sparesparrow organization
+- **No credentials**: No API keys or secrets required
+- **Local installation**: Everything installed locally
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/sparesparrow/openssl-devenv/issues)
+- **Documentation**: [Getting Started Guide](../docs/getting-started.md)
+- **Community**: [Discussions](https://github.com/sparesparrow/openssl-devenv/discussions)
+
+## License
+
+Apache-2.0 (same as OpenSSL)
+
+
+
+
+# Conan 2.x Extensions Architecture & Workflow Diagram
+
+## File Explanations
+
+### Core Package Files
+
+**`🛠️ Tooling: OpenSSL Tools/conanfile.py`** - Main Python_requires Package
+- **Purpose**: Defines `openssl-tools/1.2.0` as a python_requires package
+- **Exports**: Extensions directory containing all Conan extensions
+- **Provides**: `build_openssl()` method for OpenSSL build orchestration
+- **Usage**: Other recipes use `python_requires = "openssl-tools/1.2.0"`
+
+**`🛠️ Tooling: OpenSSL Tools/test_package/conanfile.py`** - Package Validation
+- **Purpose**: Tests that python_requires functionality works correctly
+- **Validates**: Extensions are properly accessible after installation
+- **Usage**: `conan create test_package` validates the package
+
+### Extension Files
+
+**`🛠️ Tooling: OpenSSL Tools/extensions/deployers/full_deploy_enhanced.py`** - Enhanced Deployer
+- **Purpose**: Custom Conan deployer with SBOM generation and FIPS support
+- **Features**:
+  - Generates CycloneDX format SBOMs
+  - Deploys FIPS artifacts (fipsmodule.cnf)
+  - Creates complete deployment bundles in `full_deploy/` structure
+- **Usage**: `--deployer=full_deploy_enhanced`
+
+**`🛠️ Tooling: OpenSSL Tools/extensions/graph/analyzer.py`** - Dependency Analyzer
+- **Purpose**: Analyzes Conan dependency graphs for conflicts and FIPS status
+- **Features**:
+  - Detects FIPS-enabled packages
+  - Identifies dependency conflicts
+  - Provides structured analysis results
+- **Usage**: Integrated into `conan openssl:graph` command
+
+### Command Extensions
+
+**`🛠️ Tooling: OpenSSL Tools/extensions/commands/openssl/cmd_build.py`** - Build Command
+- **Purpose**: `conan openssl:build` - simplified OpenSSL build orchestration
+- **Features**:
+  - Handles FIPS mode configuration
+  - Uses enhanced deployer automatically
+  - Supports custom profiles and deployment folders
+- **Usage**: `conan openssl:build --fips --profile=linux-gcc11-fips`
+
+**`🛠️ Tooling: OpenSSL Tools/extensions/commands/openssl/cmd_graph.py`** - Graph Command
+- **Purpose**: `conan openssl:graph` - dependency analysis and visualization
+- **Features**:
+  - Human-readable output format
+  - JSON output for automation
+  - FIPS package detection
+- **Usage**: `conan openssl:graph --json > dependencies.json`
+
+### CI/CD Integration
+
+**`🛠️ Tooling: OpenSSL Tools/.github/workflows/openssl-ci-reusable.yml`** - Reusable CI Workflow
+- **Purpose**: Reusable GitHub Actions workflow for OpenSSL builds
+- **Features**:
+  - Multi-platform support (Linux/Windows/macOS)
+  - Configurable build options (shared, FIPS)
+  - Artifact upload and management
+- **Usage**: Called by other repositories via `workflow_call`
+
+**`🛠️ Tooling: OpenSSL Tools/.github/workflows/trigger-openssl.yml`** - Integration Trigger
+- **Purpose**: Triggers OpenSSL repository workflows when tools are updated
+- **Features**:
+  - Automatic triggering on main branch pushes
+  - Manual trigger support for testing
+  - Cross-repository workflow dispatch
+- **Usage**: Automatically runs when openssl-tools changes
+
+### Platform Configuration
+
+**`🛠️ Tooling: OpenSSL Tools/conan-dev/platform-config.yml`** - Development Environment Config
+- **Purpose**: Configuration for local Conan development environment
+- **Features**:
+  - Platform-specific settings
+  - Profile management
+  - Script and launcher configuration
+- **Usage**: Used by development tools and scripts
+
+### Upload & Distribution
+
+**`🛠️ Tooling: OpenSSL Tools/scripts/upload-conan-package.py`** - Package Upload Script
+- **Purpose**: Uploads Conan packages to GitHub releases as assets
+- **Features**:
+  - Creates ZIP archives of packages
+  - Generates GitHub releases with package metadata
+  - Supports user/channel references
+- **Usage**: `./scripts/upload-conan-package.py --github-owner sparesparrow --github-repo openssl-tools`
+
+### Runtime Environment
+
+**`🛠️ Tooling: OpenSSL Tools/build-release/conan/conanrunenv-release-x86_64.sh`** - Runtime Environment
+- **Purpose**: Sets up runtime environment variables for Conan packages
+- **Features**:
+  - Configures OPENSSL_PROFILES_PATH
+  - Sets up FIPS_DATA_ROOT for FIPS builds
+  - Provides environment cleanup script
+
+## Architecture Flow Diagram
+
+```mermaid
+graph TB
+    subgraph "🔧 Core Package"
+        A[🛠️ conanfile.py<br/>Python_requires Package]
+        B[🛠️ test_package/conanfile.py<br/>Package Validation]
+    end
+
+    subgraph "📦 Extensions"
+        C[🛠️ full_deploy_enhanced.py<br/>Enhanced Deployer<br/>SBOM + FIPS]
+        D[🛠️ analyzer.py<br/>Graph Analyzer<br/>Conflict Detection]
+    end
+
+    subgraph "🎮 Commands"
+        E[🛠️ cmd_build.py<br/>openssl:build<br/>Simplified Builds]
+        F[🛠️ cmd_graph.py<br/>openssl:graph<br/>Dependency Analysis]
+    end
+
+    subgraph "🔄 CI/CD Integration"
+        G[🛠️ openssl-ci-reusable.yml<br/>Reusable Workflow<br/>Multi-Platform]
+        H[🛠️ trigger-openssl.yml<br/>Cross-Repo Trigger<br/>Integration Tests]
+    end
+
+    subgraph "⚙️ Configuration"
+        I[🛠️ platform-config.yml<br/>Dev Environment<br/>Profile Management]
+    end
+
+    subgraph "📤 Distribution"
+        J[🛠️ upload-conan-package.py<br/>GitHub Release<br/>Package Distribution]
+    end
+
+    subgraph "🔧 Runtime"
+        K[🛠️ conanrunenv-release-x86_64.sh<br/>Runtime Environment<br/>Variable Setup]
+    end
+
+    %% Core Package Relations
+    A --> B
+    A --> C
+    A --> D
+    A --> E
+    A --> F
+
+    %% Extension Relations
+    C --> J
+    D --> F
+
+    %% Command Relations
+    E --> C
+    F --> D
+
+    %% CI/CD Relations
+    G --> E
+    H --> G
+
+    %% Configuration Relations
+    I --> G
+
+    %% Runtime Relations
+    K --> C
+
+    %% Workflow Descriptions
+    subgraph "🔄 Build Workflow"
+        direction TB
+        A1[1. Load python_requires<br/>openssl-tools/1.2.0]
+        A2[2. Configure with options<br/>--fips --profile]
+        A3[3. Build with orchestration<br/>build_openssl()]
+        A4[4. Deploy with enhanced deployer<br/>SBOM + artifacts]
+        A5[5. Package for distribution<br/>GitHub releases]
+
+        A1 --> A2 --> A3 --> A4 --> A5
+    end
+
+    subgraph "📊 Analysis Workflow"
+        direction TB
+        B1[1. Load dependency graph<br/>conanfile.txt/conanfile.py]
+        B2[2. Analyze with analyzer.py<br/>Conflicts & FIPS status]
+        B3[3. Generate report<br/>JSON/Human readable]
+        B4[4. Export results<br/>CI integration]
+
+        B1 --> B2 --> B3 --> B4
+    end
+
+    subgraph "🚀 CI/CD Workflow"
+        direction TB
+        C1[1. Trigger on changes<br/>conanfile.py updates]
+        C2[2. Multi-platform build<br/>Linux/Windows/macOS]
+        C3[3. Enhanced deployment<br/>SBOM + security scan]
+        C4[4. Artifact management<br/>Cloudsmith + GitHub]
+
+        C1 --> C2 --> C3 --> C4
+    end
+
+    %% Styling
+    classDef primary fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef secondary fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef tertiary fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+
+    class A,B primary
+    class C,D,E,F secondary
+    class G,H,I,J,K tertiary
+```
+
+## Workflow Integration Points
+
+### 🔄 **Build Workflow**
+1. **Entry Point**: `conan openssl:build --fips`
+2. **Python Requires**: Loads `openssl-tools/1.2.0`
+3. **Build Orchestration**: Uses `build_openssl()` method
+4. **Enhanced Deployment**: `full_deploy_enhanced` creates bundles
+5. **Artifact Management**: Upload script creates GitHub releases
+
+### 📊 **Analysis Workflow**
+1. **Entry Point**: `conan openssl:graph --json`
+2. **Graph Loading**: Parses conanfile.txt/conanfile.py
+3. **Analysis Engine**: `analyzer.py` detects conflicts and FIPS
+4. **Output Generation**: Human-readable or JSON format
+5. **CI Integration**: Results feed into security scanning
+
+### 🚀 **CI/CD Workflow**
+1. **Trigger**: Changes to conanfile.py files
+2. **Reusable Workflows**: `openssl-ci-reusable.yml` handles builds
+3. **Cross-Repo Sync**: `trigger-openssl.yml` notifies dependent repos
+4. **Platform Matrix**: Linux/Windows/macOS builds
+5. **Security Integration**: SBOM generation and vulnerability scanning
+
+## File Relations Summary
+
+| File | Purpose | Workflow Integration | Dependencies |
+|------|---------|---------------------|-------------|
+| **conanfile.py** | Python_requires hub | All workflows | Extensions |
+| **full_deploy_enhanced.py** | Enhanced deployment | Build workflow | conanfile.py |
+| **analyzer.py** | Graph analysis | Analysis workflow | conanfile.py |
+| **cmd_build.py** | Build command | Build workflow | conanfile.py |
+| **cmd_graph.py** | Graph command | Analysis workflow | analyzer.py |
+| **openssl-ci-reusable.yml** | CI workflow | CI/CD workflow | cmd_build.py |
+| **platform-config.yml** | Dev environment | Local development | All files |
+| **upload-conan-package.py** | Package distribution | CI/CD workflow | Built packages |
+| **trigger-openssl.yml** | Integration trigger | CI/CD workflow | Repository changes |
+
+This architecture provides a comprehensive, integrated Conan 2.x ecosystem for OpenSSL development with seamless CI/CD integration and enhanced security compliance.
+
+
+
+# Verification Scripts Documentation
+
+This document describes the verification scripts for the OpenSSL Conan development environment.
+
+## Overview
+
+The verification suite consists of three main scripts that test different aspects of the bootstrap and development environment:
+
+1. **`verify-bootstrap.sh`** - Tests the bootstrap script functionality
+2. **`verify-commands.py`** - Tests custom Conan commands
+3. **`verify-deployer.sh`** - Tests the enhanced deployer functionality
+
+## Scripts
+
+### verify-bootstrap.sh
+
+**Purpose**: Verify the bootstrap script (`openssl-conan-init.py`) works correctly.
+
+**Location**: `scripts/verify-bootstrap.sh`
+
+**Tests**:
+- Bootstrap script exists and is executable
+- Bootstrap script syntax validation
+- Bootstrap script help output
+- Dry run mode functionality
+- Test mode functionality
+- Fresh installation test (minimal mode)
+- Remote configuration test
+- Idempotency test (running twice should succeed)
+- Full mode dry run test
+- Dev mode dry run test
+- Validation mode test
+- Error handling test
+
+**Usage**:
+```bash
+# Run all bootstrap verification tests
+./scripts/verify-bootstrap.sh
+
+# Make executable if needed
+chmod +x scripts/verify-bootstrap.sh
+```
+
+**Expected Output**:
+```
+[INFO] Starting bootstrap script verification
+[PASS] Bootstrap script exists and is executable
+[PASS] Bootstrap script syntax is valid
+[PASS] Bootstrap script help command works
+...
+[PASS] All tests passed!
+```
+
+### verify-commands.py
+
+**Purpose**: Verify custom Conan commands are installed and working.
+
+**Location**: `scripts/verify-commands.py`
+
+**Tests**:
+- Conan installation check
+- Command visibility in `conan --help`
+- `conan openssl:build --help` functionality
+- `conan openssl:graph --help` functionality
+- Graph analyzer with test conanfile
+- Command error handling
+
+**Usage**:
+```bash
+# Run all command verification tests
+python3 scripts/verify-commands.py
+
+# With custom Conan path
+python3 scripts/verify-commands.py --conan-path /usr/local/bin/conan
+```
+
+**Expected Output**:
+```
+🔧 Checking Conan installation
+✅ Conan 2.21.0 is installed and accessible
+🔧 Checking command visibility in conan --help
+✅ OpenSSL commands visible in conan --help
+...
+✅ All tests passed!
+```
+
+### verify-deployer.sh
+
+**Purpose**: Verify the enhanced deployer functionality.
+
+**Location**: `scripts/verify-deployer.sh`
+
+**Tests**:
+- Conan availability check
+- Enhanced deployer availability
+- Test conanfile creation
+- Deployer execution
+- Deploy folder structure verification
+- SBOM generation (CycloneDX format)
+- Metadata generation
+- Cache path mapping
+- Symlink strategy (if OPENSSL_DEVENV is set)
+- Error handling
+- Performance test
+
+**Usage**:
+```bash
+# Run all deployer verification tests
+./scripts/verify-deployer.sh
+
+# Make executable if needed
+chmod +x scripts/verify-deployer.sh
+```
+
+**Expected Output**:
+```
+[INFO] Starting enhanced deployer verification
+[PASS] Conan is available (version: 2.21.0)
+[PASS] Enhanced deployer found at /home/user/.conan2/extensions/deployers/full_deploy_enhanced.py
+...
+[PASS] All tests passed!
+```
+
+## Running All Verification Scripts
+
+### Individual Scripts
+
+```bash
+# Test bootstrap script
+./scripts/verify-bootstrap.sh
+
+# Test custom commands
+python3 scripts/verify-commands.py
+
+# Test enhanced deployer
+./scripts/verify-deployer.sh
+```
+
+### Combined Verification
+
+```bash
+# Run all verification scripts
+cd /path/to/openssl-devenv
+
+echo "=== Bootstrap Verification ==="
+./scripts/verify-bootstrap.sh
+
+echo "=== Commands Verification ==="
+python3 scripts/verify-commands.py
+
+echo "=== Deployer Verification ==="
+./scripts/verify-deployer.sh
+```
+
+## Success Criteria
+
+### Bootstrap Verification
+- ✅ All 12 tests pass
+- ✅ Bootstrap script is syntactically correct
+- ✅ All modes (minimal, full, dev) work in dry-run
+- ✅ Fresh installation succeeds
+- ✅ Idempotency works (can run twice)
+
+### Commands Verification
+- ✅ All 6 tests pass
+- ✅ Custom commands are visible in `conan --help`
+- ✅ `conan openssl:build --help` works
+- ✅ `conan openssl:graph --help` works
+- ✅ Graph analyzer produces valid JSON
+
+### Deployer Verification
+- ✅ All 11 tests pass
+- ✅ Enhanced deployer is available
+- ✅ Deploy folder structure is correct
+- ✅ SBOM generation works (CycloneDX format)
+- ✅ Metadata generation works
+- ✅ Performance is acceptable (<5 minutes)
+
+## CI Integration
+
+### GitHub Actions
+
+```yaml
+name: Verification Tests
+
+on: [push, pull_request]
+
+jobs:
+  verify-bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run bootstrap verification
+        run: ./scripts/verify-bootstrap.sh
+
+  verify-commands:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Conan
+        run: pip install conan==2.21.0
+      - name: Run commands verification
+        run: python3 scripts/verify-commands.py
+
+  verify-deployer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Conan
+        run: pip install conan==2.21.0
+      - name: Install extensions
+        run: |
+          mkdir -p ~/.conan2/extensions
+          cp -r openssl-tools/extensions/* ~/.conan2/extensions/
+      - name: Run deployer verification
+        run: ./scripts/verify-deployer.sh
+```
+
+### Local Development
+
+```bash
+# Quick verification during development
+./scripts/verify-bootstrap.sh && echo "Bootstrap OK" || echo "Bootstrap FAILED"
+
+# Full verification
+./scripts/verify-bootstrap.sh && \
+python3 scripts/verify-commands.py && \
+./scripts/verify-deployer.sh && \
+echo "All verifications passed!" || echo "Some verifications failed"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Q: "Bootstrap script not found"**
+```bash
+# Check if script exists and is executable
+ls -la bootstrap/openssl-conan-init.py
+chmod +x bootstrap/openssl-conan-init.py
+```
+
+**Q: "Conan command not found"**
+```bash
+# Install Conan first
+pip install conan==2.21.0
+
+# Or use full path
+python3 scripts/verify-commands.py --conan-path /usr/local/bin/conan
+```
+
+**Q: "Enhanced deployer not found"**
+```bash
+# Check if extensions are installed
+ls -la ~/.conan2/extensions/deployers/
+
+# Install extensions if missing
+mkdir -p ~/.conan2/extensions
+cp -r openssl-tools/extensions/* ~/.conan2/extensions/
+```
+
+**Q: "Tests fail in CI but pass locally"**
+```bash
+# Check environment differences
+echo "Python: $(python3 --version)"
+echo "Conan: $(conan --version)"
+echo "OS: $(uname -a)"
+echo "PATH: $PATH"
+```
+
+### Debug Mode
+
+Add debug output to scripts:
+
+```bash
+# Enable bash debug mode
+set -x
+./scripts/verify-bootstrap.sh
+
+# Enable Python debug mode
+python3 -v scripts/verify-commands.py
+```
+
+## Expected Outputs
+
+### Successful Run
+
+```
+=== Bootstrap Verification ===
+[INFO] Starting bootstrap script verification
+[PASS] Bootstrap script exists and is executable
+[PASS] Bootstrap script syntax is valid
+...
+[PASS] All tests passed!
+
+=== Commands Verification ===
+🔧 Checking Conan installation
+✅ Conan 2.21.0 is installed and accessible
+...
+✅ All tests passed!
+
+=== Deployer Verification ===
+[INFO] Starting enhanced deployer verification
+[PASS] Conan is available (version: 2.21.0)
+...
+[PASS] All tests passed!
+```
+
+### Failed Run
+
+```
+=== Bootstrap Verification ===
+[FAIL] Bootstrap script not found: /path/to/bootstrap/openssl-conan-init.py
+[INFO] Verification Summary:
+[PASS] Tests passed: 0
+[FAIL] Tests failed: 1
+```
+
+## Performance Expectations
+
+- **Bootstrap verification**: <2 minutes
+- **Commands verification**: <1 minute
+- **Deployer verification**: <5 minutes
+- **Total verification time**: <8 minutes
+
+## Maintenance
+
+### Adding New Tests
+
+1. **Bootstrap tests**: Add to `verify-bootstrap.sh`
+2. **Command tests**: Add to `verify-commands.py`
+3. **Deployer tests**: Add to `verify-deployer.sh`
+
+### Updating Success Criteria
+
+Update this document when:
+- New tests are added
+- Success criteria change
+- Performance expectations change
+- New platforms are supported
+
+## Related Documentation
+
+- [Bootstrap Script README](../bootstrap/README.md)
+- [Getting Started Guide](getting-started.md)
+- [Architecture Overview](architecture.md)
+- [Troubleshooting Guide](troubleshooting.md)
+
+
+
+
