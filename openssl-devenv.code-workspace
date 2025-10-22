@@ -1,143 +1,574 @@
-  {
-    "folders": [
+{
+  "folders": [
+    {
+      "name": "🏠 Root: OpenSSL DevEnv",
+      "path": "."
+    },
+    {
+      "name": "🔴 Tooling: openssl-tools",
+      "path": "openssl-tools"
+    },
+    {
+      "name": "🔵 Configuration: openssl-profiles",
+      "path": "openssl-profiles"
+    },
+    {
+      "name": "🟣 Domain: openssl (Main Package)",
+      "path": "openssl"
+    },
+    {
+      "name": "🟢 Bootstrap: Python Environment",
+      "path": "bootstrap"
+    },
+    {
+      "name": "⬆️ Upstream: Pristine Clones",
+      "path": "upstream"
+    },
+    {
+      "name": "📦 Submodules: Extracted for Conan Packaging",
+      "path": "submodules"
+    },
+    {
+      "name": "🔬 Fuzz: Test Corpora (Fork)",
+      "path": "fuzz-corpora"
+    },
+    {
+      "name": "🌐 libcurl: Consumer Example (Fork)",
+      "path": "libcurl"
+    },
+    {
+      "name": "🤖 MCP: Orchestration",
+      "path": "mcp-project-orchestrator"
+    },
+    {
+      "name": "📚 Docs: OpenSSL Documentation",
+      "path": "openssl-docs"
+    },
+    {
+      "name": "📖 Book: OpenSSL Book",
+      "path": "openssl-book"
+    }
+  ],
+  "settings": {
+    // ========================================
+    // Python Configuration (FIXED)
+    // ========================================
+    "python.defaultInterpreterPath": "${workspaceFolder:🔴 Tooling: openssl-tools}/venv/bin/python",
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.extraPaths": [
+      "${workspaceFolder:🔴 Tooling: openssl-tools}/openssl_tools",
+      "${workspaceFolder:🔵 Configuration: openssl-profiles}/src",
+      "${workspaceFolder:🟢 Bootstrap: Python Environment}"
+    ],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [
+      "tests",
+      "-v",
+      "--cov=openssl_tools",
+      "--cov-report=html"
+    ],
+    // ========================================
+    // Conan Configuration
+    // ========================================
+    "conan.cmake.generator": "Ninja",
+    "conan.profile.detect": true,
+    "conan.profile.name": "linux-gcc11-fips",
+    "conan.remotes": [
       {
-        "name": "openssl-devenv",
-        "path": "."
+        "name": "sparesparrow-conan",
+        "url": "https://cloudsmith.io/~sparesparrow-conan/repos/openssl-conan/",
+        "verify_ssl": true
       },
       {
-        "name": "🔐 Foundation: OpenSSL Conan Base",
-        "path": "openssl-conan-base"
-      },
-      {
-        "name": "🏛️ Foundation: FIPS Policy",
-        "path": "openssl-fips-policy"
-      },
-      {
-        "name": "🛠️ Tooling: OpenSSL Tools",
-        "path": "openssl-tools"
-      },
-      {
-        "name": "🔬 Fuzz Corpora",
-        "path": "fuzz-corpora"
-      },
-      {
-        "name": "🌐 Domain: OpenSSL",
-        "path": "openssl"
-      },
-      {
-        "name": "🤖 Orchestration: MCP Project",
-        "path": "mcp-project-orchestrator"
-      },
-      {
-        "name": "📚 Documentation: OpenSSL Docs",
-        "path": "openssl-docs"
-      },
-      {
-        "name": "🌐 Integration: libcurl",
-        "path": "libcurl"
+        "name": "conancenter",
+        "url": "https://center.conan.io",
+        "verify_ssl": true
       }
     ],
-    "settings": {
-      "python.defaultInterpreterPath": "./venv/bin/python",
-      "python.terminal.activateEnvironment": true,
-      "cmake.configureOnOpen": true,
-      "cmake.buildDirectory": "${workspaceFolder}/build",
-      "conan.cmake.generator": "Ninja",
-      "files.associations": {
-        "conanfile.py": "python",
-        "*.profile": "ini"
+    // ========================================
+    // CMake Configuration (FIXED)
+    // ========================================
+    "cmake.configureOnOpen": false,
+    "cmake.buildDirectory": "${workspaceFolder:🟣 Domain: openssl (Main Package)}/build/${buildType}",
+    "cmake.configureArgs": [
+      "-DCMAKE_MODULE_PATH=${workspaceFolder:🟣 Domain: openssl (Main Package)}/build",
+      "-DCMAKE_TOOLCHAIN_FILE=${workspaceFolder:🟣 Domain: openssl (Main Package)}/build/conan_toolchain.cmake",
+      "-DOPENSSL_FIPS=ON",
+      "-DPython3_EXECUTABLE=${workspaceFolder:🔴 Tooling: openssl-tools}/venv/bin/python",
+      "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+    ],
+    "cmake.generator": "Ninja",
+    "cmake.autoSelectActiveFolder": false,
+    "cmake.configureSettings": {
+      "OPENSSL_FIPS": "ON",
+      "BUILD_TESTING": "ON"
+    },
+    "cmake.buildArgs": [
+      "-j",
+      "$(nproc)"
+    ],
+    // ========================================
+    // C/C++ IntelliSense (FIXED)
+    // ========================================
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.default.compileCommands": "${workspaceFolder:🟣 Domain: openssl (Main Package)}/build/compile_commands.json",
+    "C_Cpp.default.includePath": [
+      "${workspaceFolder:🟣 Domain: openssl (Main Package)}/include",
+      "${workspaceFolder:🟣 Domain: openssl (Main Package)}/build/include",
+      "${workspaceFolder:🔵 Configuration: openssl-profiles}/include"
+    ],
+    "C_Cpp.default.defines": [
+      "OPENSSL_FIPS=1",
+      "OPENSSL_API_COMPAT=0x30000000L"
+    ],
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 80, BreakBeforeBraces: Stroustrup }",
+    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.intelliSenseEngine": "default",
+    // ========================================
+    // File Associations
+    // ========================================
+    "files.associations": {
+      "conanfile.py": "python",
+      "conanfile.txt": "ini",
+      "*.profile": "ini",
+      "*.cmake": "cmake",
+      "CMakeLists.txt": "cmake",
+      "*.mdc": "markdown",
+      "*.mmd": "mermaid",
+      "ARCHITECTURE*.mmd": "mermaid",
+      "*.cnf": "ini",
+      "fipsmodule.cnf": "ini"
+    },
+    // ========================================
+    // File Exclusions (ADDED submodules optimization)
+    // ========================================
+    "files.exclude": {
+      "**/.conan/**": true,
+      "**/.conan2/**": true,
+      "**/build/**": true,
+      "**/__pycache__/**": true,
+      "**/*.pyc": true,
+      "**/IMPLEMENTATION-*.md": true,
+      "**/demo-*.sh": true,
+      "**/*-agent.json": true,
+      "**/.venv/**": true,
+      "**/venv/**": true,
+      "**/node_modules/**": true,
+      "**/.pytest_cache/**": true,
+      "**/.mypy_cache/**": true,
+      "**/htmlcov/**": true,
+      "**/*.egg-info/**": true,
+      // Hide submodule internals (too noisy)
+      "**/submodules/*/vendor/**": true,
+      "**/submodules/*/.git/**": true,
+      "**/submodules/*/target/**": true // Rust builds
+    },
+    "search.exclude": {
+      "**/build/**": true,
+      "**/.conan/**": true,
+      "**/.conan2/**": true,
+      "**/__pycache__/**": true,
+      "**/.venv/**": true,
+      "**/venv/**": true,
+      "**/node_modules/**": true,
+      "**/*.o": true,
+      "**/*.so": true,
+      "**/*.a": true,
+      "**/.pytest_cache/**": true,
+      "**/.mypy_cache/**": true,
+      "**/htmlcov/**": true,
+      "**/submodules/*/vendor/**": true,
+      "**/submodules/*/.git/**": true
+    },
+    "files.watcherExclude": {
+      "**/.conan2/**": true,
+      "**/build/**": true,
+      "**/.venv/**": true,
+      "**/venv/**": true,
+      "**/submodules/**": true // Don't watch submodules (massive overhead)
+    },
+    // ========================================
+    // Editor Settings
+    // ========================================
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.rulers": [
+      80,
+      120
+    ],
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.linkedEditing": true,
+    "editor.bracketPairColorization.enabled": true,
+    "editor.guides.bracketPairs": true,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    // ========================================
+    // Language-Specific Formatting
+    // ========================================
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+        "source.fixAll": "explicit"
       },
-      "editor.formatOnSave": true
-    },
-    "extensions": {
-      "recommendations": [
-        "ms-python.python",
-        "ms-vscode.cmake-tools",
-        "ms-vscode.cpptools",
-        "ms-vscode.vscode-json",
-        "ms-vscode.vscode-yaml",
-        "github.copilot",
-        "github.copilot-chat",
-        "ms-vscode-remote.remote-containers",
-        "ms-vscode.vscode-docker",
-        "gruntfuggly.todo-tree",
-        "ms-vscode.test-adapter-converter",
-        "hbenl.vscode-test-explorer"
+      "editor.rulers": [
+        88,
+        120
       ]
     },
-    "launch": {
-      "version": "0.2.0",
-      "configurations": [
-        {
-          "name": "Python: MCP Orchestrator",
-          "type": "debugpy",
-          "request": "launch",
-          "program": "${workspaceFolder:mcp-project-orchestrator}/src/mcp_project_orchestrator/__main__.py",
-          "console": "integratedTerminal",
-          "justMyCode": false
-        },
-        {
-          "name": "CMake: Debug OpenSSL",
-          "type": "cppdbg",
-          "request": "launch",
-          "program": "${workspaceFolder:openssl}/build/Debug/bin/openssl",
-          "args": [
-            "version"
-          ],
-          "stopAtEntry": false,
-          "cwd": "${workspaceFolder:openssl}",
-          "environment": [],
-          "externalConsole": false,
-          "MIMode": "gdb",
-          "setupCommands": [
-            {
-              "description": "Enable pretty-printing for gdb",
-              "text": "-enable-pretty-printing",
-              "ignoreFailures": true
-            }
-          ]
+    "[c]": {
+      "editor.defaultFormatter": "ms-vscode.cpptools",
+      "editor.rulers": [
+        80
+      ]
+    },
+    "[cpp]": {
+      "editor.defaultFormatter": "ms-vscode.cpptools",
+      "editor.rulers": [
+        80
+      ]
+    },
+    "[markdown]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.wordWrap": "on"
+    },
+    "[yaml]": {
+      "editor.defaultFormatter": "redhat.vscode-yaml",
+      "editor.tabSize": 2
+    },
+    "[json]": {
+      "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    // ========================================
+    // Python Linting & Formatting
+    // ========================================
+    "black-formatter.args": [
+      "--line-length",
+      "88"
+    ],
+    "isort.args": [
+      "--profile",
+      "black",
+      "--line-length",
+      "88"
+    ],
+    "flake8.args": [
+      "--max-line-length=88",
+      "--extend-ignore=E203,W503,E501"
+    ],
+    "pylint.args": [
+      "--disable=C0114,C0115,C0116",
+      "--max-line-length=88"
+    ],
+    "mypy.targets": [
+      "${workspaceFolder:🔴 Tooling: openssl-tools}/openssl_tools",
+      "${workspaceFolder:🔵 Configuration: openssl-profiles}/src"
+    ],
+    // ========================================
+    // Git Configuration
+    // ========================================
+    "git.ignoreLimitWarning": true,
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    "git.enableSmartCommit": true,
+    "git.postCommitCommand": "none",
+    "gitlens.codeLens.enabled": true,
+    "gitlens.currentLine.enabled": true,
+    // ========================================
+    // Testing Configuration
+    // ========================================
+    "testExplorer.useNativeTesting": true,
+    "testExplorer.codeLens": true,
+    "cmake.ctest.parallelJobs": 4,
+    // ========================================
+    // Security & SBOM
+    // ========================================
+    "todo-tree.general.tags": [
+      "TODO",
+      "FIXME",
+      "HACK",
+      "XXX",
+      "SECURITY",
+      "CVE",
+      "FIPS"
+    ],
+    "todo-tree.highlights.customHighlight": {
+      "SECURITY": {
+        "foreground": "red",
+        "type": "text",
+        "iconColour": "red"
+      },
+      "CVE": {
+        "foreground": "orange",
+        "type": "text",
+        "iconColour": "orange"
+      },
+      "FIPS": {
+        "foreground": "blue",
+        "type": "text",
+        "iconColour": "blue"
+      }
+    },
+    // ========================================
+    // Terminal Configuration (FIXED)
+    // ========================================
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.env.linux": {
+      "CONAN_USER_HOME": "${workspaceFolder:🏠 Root: OpenSSL DevEnv}/.conan2",
+      "OPENSSL_CONF": "${workspaceFolder:🟣 Domain: openssl (Main Package)}/providers/fipsmodule.cnf",
+      "OPENSSL_MODULES": "${workspaceFolder:🟣 Domain: openssl (Main Package)}/build/providers",
+      "PYTHONPATH": "${workspaceFolder:🔴 Tooling: openssl-tools}/openssl_tools:${workspaceFolder:🔵 Configuration: openssl-profiles}/src"
+    },
+    // ========================================
+    // Docker/Containers
+    // ========================================
+    "docker.dockerPath": "docker",
+    "docker.imageBuildContextPath": "${workspaceFolder:🏠 Root: OpenSSL DevEnv}",
+    "remote.containers.defaultExtensions": [
+      "ms-python.python",
+      "ms-vscode.cpptools",
+      "ms-vscode.cmake-tools"
+    ],
+    // ========================================
+    // GitHub Actions Integration
+    // ========================================
+    "github-actions.workflows.pinned.workflows": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/security-scan.yml",
+      ".github/workflows/fips-validation.yml"
+    ],
+    // ========================================
+    // Mermaid Diagram Support
+    // ========================================
+    "markdown.mermaid.theme": "forest",
+    "mermaid.theme": "forest"
+  },
+  "extensions": {
+    "recommendations": [
+      // Core Language Support
+      "ms-python.python",
+      "ms-python.black-formatter",
+      "ms-python.isort",
+      "ms-python.flake8",
+      "ms-python.mypy-type-checker",
+      "ms-vscode.cpptools",
+      "ms-vscode.cpptools-extension-pack",
+      "ms-vscode.cmake-tools",
+      "twxs.cmake",
+      // Conan Integration
+      "ms-vscode.vscode-yaml",
+      "redhat.vscode-yaml",
+      // Git & GitHub
+      "github.copilot",
+      "github.copilot-chat",
+      "github.vscode-github-actions",
+      "eamodio.gitlens",
+      // Containers & Remote
+      "ms-vscode-remote.remote-containers",
+      "ms-vscode-remote.remote-ssh",
+      "ms-azuretools.vscode-docker",
+      // Testing
+      "hbenl.vscode-test-explorer",
+      "ms-vscode.test-adapter-converter",
+      "littlefoxteam.vscode-python-test-adapter",
+      // Productivity
+      "gruntfuggly.todo-tree",
+      "aaron-bond.better-comments",
+      "streetsidesoftware.code-spell-checker",
+      // Markdown & Diagrams
+      "yzhang.markdown-all-in-one",
+      "bierner.markdown-mermaid",
+      "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
+      // Formatting
+      "esbenp.prettier-vscode",
+      "editorconfig.editorconfig",
+      // Security
+      "snyk-security.snyk-vulnerability-scanner",
+      "github.vscode-codeql"
+    ],
+    "unwantedRecommendations": []
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "🔵 GDB: Debug OpenSSL FIPS Module",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder:🟣 Domain: openssl (Main Package)}/build/apps/openssl",
+        "args": [
+          "version",
+          "-a"
+        ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder:🟣 Domain: openssl (Main Package)}",
+        "environment": [
+          {
+            "name": "OPENSSL_CONF",
+            "value": "${workspaceFolder:🟣 Domain: openssl (Main Package)}/providers/fipsmodule.cnf"
+          },
+          {
+            "name": "OPENSSL_MODULES",
+            "value": "${workspaceFolder:🟣 Domain: openssl (Main Package)}/build/providers"
+          },
+          {
+            "name": "OPENSSL_FIPS",
+            "value": "1"
+          }
+        ],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          },
+          {
+            "description": "Set disassembly flavor to Intel",
+            "text": "-gdb-set disassembly-flavor intel",
+            "ignoreFailures": true
+          }
+        ],
+        "preLaunchTask": "CMake: Build OpenSSL"
+      },
+      {
+        "name": "🔵 Python: Debug openssl-profiles Conanfile",
+        "type": "python",
+        "request": "launch",
+        "module": "conans.client.command",
+        "args": [
+          "create",
+          "${workspaceFolder:🔵 Configuration: openssl-profiles}",
+          "--build=missing",
+          "-vv"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "cwd": "${workspaceFolder:🔵 Configuration: openssl-profiles}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder:🔵 Configuration: openssl-profiles}/src"
         }
-      ]
-    },
-    "tasks": {
-      "version": "2.0.0",
-      "tasks": [
-        {
-          "label": "Setup Development Environment",
-          "type": "shell",
-          "command": "./scripts/setup-dev-env.sh",
-          "group": "build",
-          "presentation": {
-            "echo": true,
-            "reveal": "always",
-            "focus": false,
-            "panel": "shared"
-          }
-        },
-        {
-          "label": "Run Integration Tests",
-          "type": "shell",
-          "command": "./scripts/run-integration-tests.sh",
-          "group": "test",
-          "presentation": {
-            "echo": true,
-            "reveal": "always",
-            "focus": false,
-            "panel": "shared"
-          }
-        },
-        {
-          "label": "Deploy Cursor Configuration",
-          "type": "shell",
-          "command": "cd mcp-project-orchestrator && source venv/bin/activate && mcp-orchestrator deploy-cursor --project-type openssl",
-          "group": "build",
-          "presentation": {
-            "echo": true,
-            "reveal": "always",
-            "focus": false,
-            "panel": "shared"
-          }
+      },
+      {
+        "name": "🔴 Python: Debug openssl-tools Commands",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder:🔴 Tooling: openssl-tools}/openssl_tools/commands/build.py",
+        "args": [
+          "--openssl-path",
+          "${workspaceFolder:🟣 Domain: openssl (Main Package)}",
+          "--fips",
+          "--verbose"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "cwd": "${workspaceFolder:🔴 Tooling: openssl-tools}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder:🔴 Tooling: openssl-tools}/openssl_tools"
         }
-      ]
-    }
+      },
+      {
+        "name": "🤖 Python: Debug MCP Orchestrator",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder:🤖 MCP: Orchestration}/src/mcp_project_orchestrator/__main__.py",
+        "args": [
+          "--workspace",
+          "${workspaceFolder:🏠 Root: OpenSSL DevEnv}",
+          "--verbose"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "cwd": "${workspaceFolder:🤖 MCP: Orchestration}"
+      }
+    ],
+    "compounds": [
+      {
+        "name": "🔥 Full Stack Debug: FIPS + MCP",
+        "configurations": [
+          "🔵 GDB: Debug OpenSSL FIPS Module",
+          "🤖 Python: Debug MCP Orchestrator"
+        ],
+        "stopAll": true,
+        "preLaunchTask": "Workflow: Full Development Setup"
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Environment: Bootstrap Development",
+        "type": "shell",
+        "command": "bash ${workspaceFolder:🟢 Bootstrap: Python Environment}/openssl-conan-init.py --dev --workspace ${workspaceFolder:🏠 Root: OpenSSL DevEnv}",
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": true,
+          "panel": "shared",
+          "showReuseMessage": false,
+          "clear": true
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Conan: Create openssl-profiles v2.0.0",
+        "type": "shell",
+        "command": "cd ${workspaceFolder:🔵 Configuration: openssl-profiles} && conan create . --build=missing -vv",
+        "group": "build",
+        "dependsOn": [
+          "Environment: Bootstrap Development"
+        ],
+        "problemMatcher": []
+      },
+      {
+        "label": "CMake: Build OpenSSL",
+        "type": "shell",
+        "command": "cd ${workspaceFolder:🟣 Domain: openssl (Main Package)} && cmake --build build --config Debug -j $(nproc)",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "problemMatcher": "$gcc"
+      },
+      {
+        "label": "Testing: Run FIPS Self-Tests",
+        "type": "shell",
+        "command": "cd ${workspaceFolder:🟣 Domain: openssl (Main Package)} && ./build/apps/openssl fipsinstall -out providers/fipsmodule.cnf -module ./build/providers/fips.so",
+        "group": "test",
+        "dependsOn": [
+          "CMake: Build OpenSSL"
+        ]
+      },
+      {
+        "label": "Security: Generate SBOM",
+        "type": "shell",
+        "command": "cd ${workspaceFolder:🟣 Domain: openssl (Main Package)} && syft scan . -o cyclonedx-json=sbom-cyclonedx.json",
+        "group": "build",
+        "dependsOn": [
+          "CMake: Build OpenSSL"
+        ]
+      },
+      {
+        "label": "Workflow: Full Development Setup",
+        "dependsOrder": "sequence",
+        "dependsOn": [
+          "Environment: Bootstrap Development",
+          "Conan: Create openssl-profiles v2.0.0",
+          "CMake: Build OpenSSL",
+          "Testing: Run FIPS Self-Tests",
+          "Security: Generate SBOM"
+        ],
+        "group": "build"
+      }
+    ]
   }
+}

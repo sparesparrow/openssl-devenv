@@ -1,0 +1,405 @@
+name: Modular Package CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "conanfile.py"
+      - "**/conanfile.py"
+      - "scripts/**"
+      - "openssl*/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "conanfile.py"
+      - "**/conanfile.py"
+      - "scripts/**"
+      - "openssl*/**"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Specific package to build'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - foundation
+          - tools
+          - domain
+      platform:
+        description: 'Platform to build for'
+        required: false
+        default: 'linux-gcc11'
+        type: choice
+        options:
+          - linux-gcc11
+          - linux-clang15
+          - windows-msvc2022
+          - macos-clang14
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+env:
+  CONAN_REPOSITORY_NAME: "sparesparrow-conan"
+
+jobs:
+  # Phase 1: Foundation Layer
+  foundation-packages:
+    name: Foundation Packages
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [openssl-base, openssl-fips-data]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: pip install conan==2.0.17
+
+      - name: Configure Conan
+        run: |
+          conan remote add $CONAN_REPOSITORY_NAME https://sparesparrow.jfrog.io/artifactory/api/conan/$CONAN_REPOSITORY_NAME --force
+          conan remote login $CONAN_REPOSITORY_NAME spare-sparrow --password ${{ secrets.CLOUDSMITH_API_KEY }}
+
+      - name: Create foundation package
+        run: conan create ${{ matrix.package }} --build=missing
+
+      - name: Upload foundation package
+        if: github.event_name == 'push'
+        run: conan upload ${{ matrix.package }}/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.package }}-artifacts
+          path: ~/.conan2/p/
+
+  # Phase 2: Tooling Layer (Modular)
+  modular-tools:
+    name: Modular Tools
+    runs-on: ubuntu-latest
+    needs: foundation-packages
+    strategy:
+      matrix:
+        package: [testing, security, automation, validation, providers, optimization, monitoring, compliance, benchmarking, migration, containerization, cross-compilation, development, release-management, security-audit, integration, documentation, hardware-acceleration, cloud-integration, mobile-development, embedded-systems, legacy-compatibility, enterprise-integration, high-availability, analytics-reporting, openssl-3.5.2-complete]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: pip install conan==2.0.17
+
+      - name: Configure Conan
+        run: |
+          conan remote add $CONAN_REPOSITORY_NAME https://sparesparrow.jfrog.io/artifactory/api/conan/$CONAN_REPOSITORY_NAME --force
+          conan remote login $CONAN_REPOSITORY_NAME spare-sparrow --password ${{ secrets.CLOUDSMITH_API_KEY }}
+
+      - name: Download foundation artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: openssl-base-artifacts
+          path: ~/.conan2/p/
+
+      - name: Create modular tool package
+        run: |
+          if [[ "${{ matrix.package }}" == "providers" ]]; then
+            conan create openssl-tools/conanfile-providers.py --build=missing -o enable_fips=True
+          elif [[ "${{ matrix.package }}" == "optimization" ]]; then
+            conan create openssl-tools/conanfile-optimization.py --build=missing -o optimization_level=speed
+          elif [[ "${{ matrix.package }}" == "benchmarking" ]]; then
+            conan create openssl-tools/conanfile-benchmarking.py --build=missing -o enable_detailed_profiling=True
+          elif [[ "${{ matrix.package }}" == "migration" ]]; then
+            conan create openssl-tools/conanfile-migration.py --build=missing -o migrate_from_version=3.0
+          elif [[ "${{ matrix.package }}" == "containerization" ]]; then
+            conan create openssl-tools/conanfile-containerization.py --build=missing -o include_fips=True
+          elif [[ "${{ matrix.package }}" == "cross-compilation" ]]; then
+            conan create openssl-tools/conanfile-cross-compilation.py --build=missing -o target_architectures=x86_64
+          elif [[ "${{ matrix.package }}" == "development" ]]; then
+            conan create openssl-tools/conanfile-development.py --build=missing -o ide_integration=vscode
+          elif [[ "${{ matrix.package }}" == "release-management" ]]; then
+            conan create openssl-tools/conanfile-release-management.py --build=missing -o generate_changelog=True
+          elif [[ "${{ matrix.package }}" == "security-audit" ]]; then
+            conan create openssl-tools/conanfile-security-audit.py --build=missing -o scan_vulnerabilities=True
+          elif [[ "${{ matrix.package }}" == "integration" ]]; then
+            conan create openssl-tools/conanfile-integration.py --build=missing -o integrate_with_curl=True
+          elif [[ "${{ matrix.package }}" == "documentation" ]]; then
+            conan create openssl-tools/conanfile-documentation.py --build=missing -o generate_api_docs=True
+          elif [[ "${{ matrix.package }}" == "hardware-acceleration" ]]; then
+            conan create openssl-tools/conanfile-hardware-acceleration.py --build=missing -o hardware_benchmarking=True
+          elif [[ "${{ matrix.package }}" == "cloud-integration" ]]; then
+            conan create openssl-tools/conanfile-cloud-integration.py --build=missing -o integrate_aws=True
+          elif [[ "${{ matrix.package }}" == "mobile-development" ]]; then
+            conan create openssl-tools/conanfile-mobile-development.py --build=missing -o target_ios=True
+          elif [[ "${{ matrix.package }}" == "embedded-systems" ]]; then
+            conan create openssl-tools/conanfile-embedded-systems.py --build=missing -o memory_optimization=True
+          elif [[ "${{ matrix.package }}" == "legacy-compatibility" ]]; then
+            conan create openssl-tools/conanfile-legacy-compatibility.py --build=missing -o support_openssl_1_1=True
+          elif [[ "${{ matrix.package }}" == "enterprise-integration" ]]; then
+            conan create openssl-tools/conanfile-enterprise-integration.py --build=missing -o integrate_ldap=True
+          elif [[ "${{ matrix.package }}" == "high-availability" ]]; then
+            conan create openssl-tools/conanfile-high-availability.py --build=missing -o enable_health_monitoring=True
+          elif [[ "${{ matrix.package }}" == "analytics-reporting" ]]; then
+            conan create openssl-tools/conanfile-analytics-reporting.py --build=missing -o enable_real_time_analytics=True
+          elif [[ "${{ matrix.package }}" == "openssl-3.5.2-complete" ]]; then
+            conan create openssl-tools/conanfile-openssl-3.5.2-complete.py --build=missing -o enable_providers=True -o enable_fips=True
+          else
+            conan create openssl-tools/conanfile-${{ matrix.package }}.py --build=missing
+          fi
+
+      - name: Upload tool package
+        if: github.event_name == 'push'
+        run: |
+          if [[ "${{ matrix.package }}" == "providers" ]]; then
+            conan upload openssl-providers/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "optimization" ]]; then
+            conan upload openssl-optimization/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "monitoring" ]]; then
+            conan upload openssl-monitoring/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "compliance" ]]; then
+            conan upload openssl-compliance/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "benchmarking" ]]; then
+            conan upload openssl-benchmarking/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "migration" ]]; then
+            conan upload openssl-migration/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "containerization" ]]; then
+            conan upload openssl-containerization/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "cross-compilation" ]]; then
+            conan upload openssl-cross-compilation/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "development" ]]; then
+            conan upload openssl-development/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "release-management" ]]; then
+            conan upload openssl-release-management/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "security-audit" ]]; then
+            conan upload openssl-security-audit/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "integration" ]]; then
+            conan upload openssl-integration/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "documentation" ]]; then
+            conan upload openssl-documentation/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "hardware-acceleration" ]]; then
+            conan upload openssl-hardware-acceleration/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "cloud-integration" ]]; then
+            conan upload openssl-cloud-integration/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "mobile-development" ]]; then
+            conan upload openssl-mobile-development/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "embedded-systems" ]]; then
+            conan upload openssl-embedded-systems/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "legacy-compatibility" ]]; then
+            conan upload openssl-legacy-compatibility/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "enterprise-integration" ]]; then
+            conan upload openssl-enterprise-integration/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "high-availability" ]]; then
+            conan upload openssl-high-availability/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "analytics-reporting" ]]; then
+            conan upload openssl-analytics-reporting/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          elif [[ "${{ matrix.package }}" == "openssl-3.5.2-complete" ]]; then
+            conan upload openssl-3.5.2-complete/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          else
+            conan upload openssl-${{ matrix.package }}/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: openssl-${{ matrix.package }}-artifacts
+          path: ~/.conan2/p/
+
+  # Phase 3: Meta-package
+  meta-package:
+    name: Tools Meta-package
+    runs-on: ubuntu-latest
+    needs: [foundation-packages, modular-tools]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: pip install conan==2.0.17
+
+      - name: Configure Conan
+        run: |
+          conan remote add $CONAN_REPOSITORY_NAME https://sparesparrow.jfrog.io/artifactory/api/conan/$CONAN_REPOSITORY_NAME --force
+          conan remote login $CONAN_REPOSITORY_NAME spare-sparrow --password ${{ secrets.CLOUDSMITH_API_KEY }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          pattern: *-artifacts
+          path: ~/.conan2/p/
+
+      - name: Create meta-package
+        run: conan create openssl-tools --build=missing
+
+      - name: Upload meta-package
+        if: github.event_name == 'push'
+        run: conan upload openssl-tools/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+
+  # Phase 4: Domain Layer
+  domain-package:
+    name: Domain Package (OpenSSL 3.5.2)
+    runs-on: ubuntu-latest
+    needs: [foundation-packages, meta-package]
+    strategy:
+      matrix:
+        build_type: [standard, fips, providers, quantum-safe, optimized]
+        include:
+          - build_type: standard
+            name: "Standard OpenSSL 3.5.2"
+            options: ""
+          - build_type: fips
+            name: "FIPS 140-3 Compliant"
+            options: "-o enable_fips=True -o enable_providers=True"
+          - build_type: providers
+            name: "Provider Architecture"
+            options: "-o enable_providers=True -o enable_oqs=True -o enable_pkcs11=True"
+          - build_type: quantum-safe
+            name: "Quantum-Safe Ready"
+            options: "-o enable_providers=True -o enable_oqs=True"
+          - build_type: optimized
+            name: "Performance Optimized"
+            options: "-o enable_providers=True -o enable_lto=True -o optimization_level=max"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: pip install conan==2.0.17
+
+      - name: Configure Conan
+        run: |
+          conan remote add $CONAN_REPOSITORY_NAME https://sparesparrow.jfrog.io/artifactory/api/conan/$CONAN_REPOSITORY_NAME --force
+          conan remote login $CONAN_REPOSITORY_NAME spare-sparrow --password ${{ secrets.CLOUDSMITH_API_KEY }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          pattern: *-artifacts
+          path: ~/.conan2/p/
+
+      - name: Create OpenSSL 3.5.2 package
+        run: |
+          echo "Building OpenSSL 3.5.2 - ${{ matrix.name }}"
+          conan create openssl --build=missing ${{ matrix.options }}
+
+      - name: Upload OpenSSL package
+        if: github.event_name == 'push'
+        run: conan upload openssl/*@sparesparrow/stable -r=$CONAN_REPOSITORY_NAME
+
+      - name: Validate OpenSSL 3.5.2 features
+        run: |
+          echo "Testing OpenSSL 3.5.2 build: ${{ matrix.name }}"
+          openssl version -v
+          openssl list -providers
+
+  # Phase 5: Integration Testing
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [domain-package]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Conan
+        run: pip install conan==2.0.17
+
+      - name: Configure Conan
+        run: |
+          conan remote add $CONAN_REPOSITORY_NAME https://sparesparrow.jfrog.io/artifactory/api/conan/$CONAN_REPOSITORY_NAME --force
+          conan remote login $CONAN_REPOSITORY_NAME spare-sparrow --password ${{ secrets.CLOUDSMITH_API_KEY }}
+
+      - name: Run integration tests
+        run: python scripts/create-improved-packages.py --validate-only
+
+      - name: Test FIPS integration
+        run: |
+          conan install --requires=openssl/3.3.0@sparesparrow/stable \
+            --options=openssl/*:enable_fips=True \
+            --build=missing
+
+  # Phase 6: Security Scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: [domain-package]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install tools
+        run: |
+          pip install conan==2.0.17
+          # Install security scanning tools
+          pip install safety bandit
+
+      - name: Run security scans
+        run: |
+          # Python security scan
+          safety check
+          # Code quality scan
+          bandit -r . -f json -o security-report.json
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: security-report.json
+
+  # Phase 7: Documentation
+  documentation:
+    name: Documentation
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate package documentation
+        run: |
+          # Generate Conan package list
+          conan list "*" --format=json > packages.json
+          # Update modular packages documentation
+          python scripts/generate-package-docs.py
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: package-documentation
+          path: |
+            packages.json
+            CONAN-MODULAR-PACKAGES.md
