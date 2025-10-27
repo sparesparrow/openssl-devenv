@@ -1,0 +1,44 @@
+name: "OpenSSL Security Analysis"
+
+# Query packs to run
+packs:
+  - codeql/cpp-queries:security-extended
+  - codeql/python-queries:security-extended
+
+# Custom queries (create these in .github/codeql/custom-queries/)
+queries:
+  - name: openssl-custom-queries
+    uses: ./.github/codeql/custom-queries/
+
+# Paths to exclude from analysis
+paths-ignore:
+  - test/**
+  - tests/**
+  - fuzz/**
+  - build/**
+  - out/**
+  - .conan/**
+  - "**/*.md"
+  - "**/*.txt"
+  - "**/*.yml"
+  - "**/*.yaml"
+  - "**/*.json"
+
+# Additional configuration
+query-filters:
+  - exclude:
+      id:
+        - cpp/weak-cryptographic-algorithm
+        - cpp/cleartext-storage-sensitive-information
+      # OpenSSL intentionally implements deprecated algorithms for compatibility
+      
+  # Focus on critical security issues
+  - include:
+      severity:
+        - error
+        - warning
+        
+# Database settings
+database:
+  interpret-results: true
+  finalize-db: false
